@@ -1,0 +1,88 @@
+---
+nginx_default_security_headers:
+  Content-Security-Policy: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; frame-ancestors: 'self'; base-uri: 'self'; form-action: 'self'; block-all-mixed-content; upgrade-insecure-requests;"
+  Expect-CT: 'max-age=6048000; enforce;'
+  Referrer-Policy: 'same-origin'
+  Strict-Transport-Security: 'max-age=31536000;'
+  X-Content-Type-Options: 'nosniff'
+  X-Frame-Options: 'SAMEORIGIN'
+nginx_vhost_defaults:
+  - use_tls: false
+    use_php: false
+    security_headers: {}
+    disabled_security_headers: []
+    static_assets: '\.(css|js|txt|html|htm|xhtml|xml|json|svg|png|jpg|jpeg|gif|ico|map|woff2?|ttf)$'
+    log_static_assets: true
+    locations: {}
+    blocked_locations: []
+    php_extra_options: []
+nginx_php_disabled_functions:
+  - assert
+  - eval
+  - exec
+  - extract
+  - fopen_with_path
+  - fsockopen
+  - get_current_user
+  - getmygid
+  - getmyinode
+  - getmypid
+  - getmyuid
+  - highlight_file
+  - passthru
+  - pcntl_exec
+  - phpinfo
+  - popen
+  - posix_mkfifo
+  - preg_replace
+  - proc_open
+  - putenv
+  - shell_exec
+  - show_source
+  - socket_create
+  - symlink
+  - system
+nginx_php_default_options:
+  PHP:
+    allow_url_fopen: 'Off'
+    allow_url_include: 'Off'
+    auto_globals_jit: 'On'
+    cgi.rfc2616_headers: 'Off'
+    display_errors: 'Off'
+    display_startup_errors: 'Off'
+    enable_dl: 'Off'
+    error_log: "{{ nginx_php_error_log | default('syslog') }}"
+    error_reporting: 'E_ALL & ~E_DEPRECATED & ~E_STRICT'
+    expose_php: 'Off'
+    file_uploads: 'Off'
+    html_errors: 'Off'
+    ignore_repeated_errors: 'Off'
+    ignore_repeated_source: 'Off'
+    log_errors: 'On'
+    max_execution_time: "{{ nginx_php_timeout }}"
+    output_buffering: '4096'
+    post_max_size: "{{ nginx_max_body_size }}M"
+    register_argc_argv: 'Off'
+    request_order: 'GP'
+    short_open_tag: 'Off'
+    upload_max_filesize: "{{ nginx_max_body_size }}M"
+    user_ini.filename: ''
+    variables_order: 'GPCS'
+  Date:
+    date.timezone: "{{ nginx_php_timezone }}"
+  Session:
+    session.gc_probability: '1'
+    session.gc_divisor: '100'
+    session.gc_maxlifetime: '86400'
+    session.sid_length: '48'
+    session.sid_bits_per_character: '6'
+    session.cookie_lifetime: '0'
+    session.use_strict_mode: 'On'
+    session.use_cookies: 'On'
+    session.use_only_cookies: 'On'
+    session.cookie_httponly: 'On'
+    session.cookie_samesite: 'Strict'
+  mail function:
+    mail.add_x_header: 'Off'
+  Assertion:
+    zend.assertions: '-1'

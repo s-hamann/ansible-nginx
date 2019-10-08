@@ -1,0 +1,38 @@
+{# vim: filetype=systemd.jinja2 #}
+[Service]
+User={{ nginx_user }}
+Group={{ nginx_group }}
+PIDFile={{ nginx_pidfile['php'] | quote }}
+RuntimeDirectory={{ nginx_pidfile['php'] | dirname | relpath('/run') | quote }}
+# Disable searching and processing additional ini files
+Environment=PHP_INI_SCAN_DIR=
+# Apply principle of least privilege
+CapabilityBoundingSet=
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+{% if nginx_php_error_log | default(false) and nginx_php_error_log != 'syslog' %}
+ReadWritePaths={{ nginx_php_error_log | dirname }}
+{% endif %}
+ReadWritePaths={{ nginx_writable_paths | map('quote') | join(' ') }}
+{% if nginx_inaccessible_paths | count %}
+InaccessiblePaths={{ nginx_inaccessible_paths | unique | map('quote') | join(' ') }}
+{% endif %}
+{% if _use_tls %}
+InaccessiblePaths={{ nginx_vhosts | map(attribute='tls_cert_key') | select('defined') | map('dirname') | unique | map('quote') | join(' ') }}
+{% endif %}
+PrivateTmp=true
+PrivateDevices=true
+PrivateUsers=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+RestrictRealtime=true
+SystemCallFilter=@system-service @basic-io @io-event @network-io madvise
+SystemCallFilter=~@aio @chown @keyring @memlock @privileged @resources @setuid
+SystemCallArchitectures=native
+RemoveIPC=true

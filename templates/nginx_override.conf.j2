@@ -1,0 +1,33 @@
+{# vim: filetype=systemd.jinja2 #}
+[Service]
+User={{ nginx_user }}
+Group={{ nginx_group }}
+PIDFile={{ nginx_pidfile['nginx'] | quote }}
+RuntimeDirectory={{ nginx_pidfile['nginx'] | dirname | relpath('/run') | quote }}
+# Allow binding to low ports
+CapabilityBoundingSet=
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+AmbientCapabilities=
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+# Apply principle of least privilege
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths={{ (_log_paths + nginx_writable_paths) | unique | map('quote') | join(' ') }}
+{% if nginx_inaccessible_paths | count %}
+InaccessiblePaths={{ nginx_inaccessible_paths | unique | map('quote') | join(' ') }}
+{% endif %}
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+RestrictRealtime=true
+SystemCallFilter=@system-service @basic-io @io-event @network-io madvise
+SystemCallFilter=~@aio @chown @keyring @memlock @privileged @resources @setuid
+SystemCallArchitectures=native
+RemoveIPC=true

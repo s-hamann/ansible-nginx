@@ -1,0 +1,121 @@
+#jinja2: lstrip_blocks: True
+{# vim: filetype=nginx.jinja2 #}
+# {{ ansible_managed }}
+
+{% if ansible_facts['service_mgr'] != 'systemd' %}
+{# With systemd, the unit handles switching the user #}
+user {{ nginx_user }} {{ nginx_group }};
+{% endif %}
+
+pid {{ nginx_pidfile['nginx'] }};
+
+include {{ nginx_config_dir['nginx'] }}modules-enabled/*.conf;
+
+{% if nginx_error_log is defined %}
+# Log to {{ nginx_error_log }}
+error_log {{ nginx_error_log }} warn;
+{% elif ansible_facts['service_mgr'] == 'systemd' %}
+# Log to journal
+error_log stderr warn;
+{% else %}
+# Log to syslog
+error_log syslog:server=unix:/dev/log warn;
+{% endif %}
+
+worker_processes {{ nginx_worker_processes }};
+
+{% block events %}
+events {
+    {% if nginx_worker_connections is defined %}
+    worker_connections {{ nginx_worker_connections }};
+    {% endif %}
+}
+{% endblock %}
+
+{% for opt in nginx_extra_options['nginx'] | default([]) %}
+{{ opt }};
+{% endfor %}
+
+http {
+    {% block http_basic %}
+    server_tokens off;
+
+    include {{ nginx_config_dir['nginx'] }}mime.types;
+    default_type  application/octet-stream;
+
+    {% block http_timeouts %}
+    client_header_timeout 10s;
+    client_body_timeout 60s;
+    send_timeout 10s;
+    keepalive_timeout {{ nginx_keepalive_timeout }} {{ nginx_keepalive_timeout }};
+    {% endblock %}
+
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+
+    client_max_body_size {{ nginx_max_body_size }}m;
+
+    # Cache file descriptors and meta information
+    open_file_cache max=512;
+    open_file_cache_errors on;
+
+    # Only follow symlinks if the owner of the target file matches. This helps preventing symlink attacks.
+    disable_symlinks if_not_owner;
+
+    # Set caching headers per content type.
+    map $sent_http_content_type $expires {
+        {% for type, expires in ({'default': 'off'} | combine(nginx_caching_policy)).items() %}
+        {{ type }} {{ expires }};
+        {% endfor %}
+    }
+    expires $expires;
+    {% endblock %}
+
+    {% block http_logging %}
+    {% set _log_format = 'combined' %}
+    {% if nginx_log_format is defined %}
+    # Custom access log format
+    log_format main {{ nginx_log_format | indent(22) }};
+    {% set _log_format = 'main' %}
+    {% endif %}
+    {% if nginx_access_log | default(false) %}
+    access_log {{ nginx_access_log }} {{ _log_format }} {{ nginx_access_log_options }};
+    {% else %}
+    access_log off;
+    {% endif %}
+    {% endblock %}
+
+    {% block http_gzip %}
+    {% if nginx_gzip_dynamic | bool %}
+    # Response compression
+    gzip on;
+    gzip_types
+        text/css
+        text/javascript
+        text/plain
+        text/xml
+        application/javascript
+        application/json
+        application/rss+xml
+        application/atom+xml
+        application/xhtml+xml
+        application/xml
+        image/svg
+        image/svg+xml;
+    gzip_min_length 1024;
+    gzip_comp_level 5;
+    gzip_proxied any;
+    gzip_vary on;
+    {% endif %}
+    {% endblock %}
+
+    {% for opt in nginx_extra_options['nginx_http'] | default([]) %}
+    {{ opt }};
+    {% endfor %}
+
+    {% block http_includes %}
+    # Include the per-vhost configuration files
+    include {{ nginx_config_dir['nginx'] }}sites-enabled/*;
+    {% endblock %}
+}

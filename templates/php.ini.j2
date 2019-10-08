@@ -1,0 +1,33 @@
+{# vim: filetype=dosini #}
+; {{ ansible_managed }}
+[PHP]
+
+; Disable certain functions for security reasons.
+disable_functions = {{ nginx_php_disabled_functions | difference(nginx_php_enabled_functions) | join(',') }}
+
+{% for k, v in (nginx_php_default_options['PHP'] | combine(nginx_php_extra_options['PHP'] | default({}))).items() %}
+{{ k }} = {{ v }}
+{% endfor %}
+
+;;;;;;;;;;;;;;;;;;;;;;
+; Dynamic Extensions ;
+;;;;;;;;;;;;;;;;;;;;;;
+
+{% for extension in nginx_php_zend_extensions %}
+zend_extension={{ extension }}
+{% endfor %}
+{% for extension in nginx_php_extensions %}
+extension={{ extension }}
+{% endfor %}
+
+;;;;;;;;;;;;;;;;;;;
+; Module Settings ;
+;;;;;;;;;;;;;;;;;;;
+
+{% for key, options in (nginx_php_default_options | combine(nginx_php_extra_options, recursive=True)).items() if key not in ['PHP', 'php-fpm', 'php-fpm_pool'] %}
+[{{ key }}]
+{% for k, v in options.items() %}
+{{ k }} = {{ v }}
+{% endfor %}
+
+{% endfor %}

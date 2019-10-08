@@ -1,0 +1,244 @@
+#jinja2: lstrip_blocks: True
+{# vim: filetype=nginx.jinja2 #}
+# {{ ansible_managed }}
+{% set _disabled_security_headers = _vhost.disabled_security_headers | map('lower') | list %}
+{% if not _vhost.use_tls | bool %}
+{{ _disabled_security_headers.append('strict-transport-security') }}
+{{ _disabled_security_headers.append('expect-ct') }}
+{% endif %}
+{% macro security_headers() -%}
+    # Security headers.
+    {% for header, value in (nginx_default_security_headers | combine(nginx_security_headers) | combine(_vhost.security_headers)).items() if header | lower not in _disabled_security_headers %}
+    add_header {{ header }} "{{ value }}" always;
+    {% endfor %}
+{% endmacro %}
+{% macro location_block(location) %}
+    {% if location.return is defined %}
+        return {{ location.return }};
+    {% endif %}
+    {% if location.gzip_dynamic is defined %}
+        gzip {{ location.gzip_dynamic | bool | ternary('on', 'off') }};
+    {% endif %}
+    {% if location.gzip_static is defined %}
+        gzip_static {{ location.gzip_static | bool | ternary('on', 'off') }};
+    {% endif %}
+    {% if location.access_log is defined %}
+        {% if location.access_log | bool %}
+        access_log {{ location.access_log }}{% if nginx_log_format is defined %} main{% endif %};
+        {% else %}
+        access_log off;
+        {% endif %}
+    {% endif %}
+    {% if location.extra_options | default([]) | map('regex_search', '^\s*add_header\s') | select | list | count > 0 %}
+    {{ security_headers() }}
+    {% endif %}
+    {% for opt in location.extra_options | default([]) %}
+    {{ opt }};
+    {% endfor %}
+{% endmacro %}
+
+{% block server_redirect %}
+    {% if _vhost.unencrypted_port is defined and _vhost.use_tls | bool %}
+server {
+    listen {{ _vhost.ip | default('*') }}:{{ _vhost.unencrypted_port }};
+    {% if _vhost.server_name is defined %}
+    server_name {{ [_vhost.server_name] | flatten | join(' ') }};
+    {% endif %}
+    return 301 https://$host{{ (_vhost.port | default(_vhost.use_tls | bool | ternary(443, 80)) == 443) | ternary('', ':' ~ _vhost.port | default(_vhost.use_tls | bool | ternary(443, 80))) }}$request_uri;
+}
+    {% endif %}
+{% endblock %}
+
+server {
+    {% block server_basic %}
+    listen {{ _vhost.ip | default('*') }}:{{ _vhost.port | default(_vhost.use_tls | bool | ternary(443, 80)) }}{% if _vhost.use_tls | bool %} ssl http2{% endif %};
+    {% if _vhost.server_name is defined %}
+    server_name {{ [_vhost.server_name] | flatten | join(' ') }};
+    {% endif %}
+
+    {% if _vhost.root is defined %}
+    root {{ _vhost.root }};
+    {% endif %}
+    index {{ _vhost.index | default(_vhost.use_php | ternary('index.php ', '') ~ 'index.html index.htm') }};
+
+    {% for error_page in [_vhost.error_page | default([])] | flatten %}
+    error_page {{ error_page }};
+    {% endfor %}
+
+    {% if _vhost.access_log is defined %}
+    {% if _vhost.access_log | bool %}
+    access_log {{ _vhost.access_log }}{% if nginx_log_format is defined %} main{% endif %};
+    {% else %}
+    access_log off;
+    {% endif %}
+    {% endif %}
+    {% if _vhost.error_log is defined %}
+    error_log {{ _vhost.error_log }} error;
+    {% endif %}
+    {% endblock %}
+
+    {% block server_tls %}
+    {% if _vhost.use_tls | bool %}
+    ssl_certificate {{ _vhost.tls_cert }};
+    ssl_certificate_key {{ _vhost.tls_cert_key }};
+    {% if nginx_tls13_only | bool %}
+    ssl_protocols TLSv1.3;
+    {% else %}
+    ssl_protocols TLSv1.2 TLSv1.3;
+    {% endif %}
+    ssl_ciphers {{ nginx_ciphers }};
+    ssl_dhparam {{ nginx_config_dir['nginx'] }}dhparams.pem;
+    # Leave cipher preference to the browser. Today's browsers are much better maintained than servers are.
+    ssl_prefer_server_ciphers off;
+    # Allow for session resumption.
+    ssl_session_cache shared:TLS:1m;
+    ssl_session_tickets on;
+    {% if nginx_ocsp_stapling | bool %}
+    # Enable OCSP stapling.
+    ssl_stapling on;
+    ssl_stapling_verify on;
+    {% else %}
+    # Disable OCSP stapling.
+    ssl_stapling off;
+    {% endif %}
+    {% endif %}
+    {% endblock %}
+
+    {{ security_headers() }}
+
+    {% for opt in _vhost.extra_options | default([]) %}
+    {{ opt }};
+    {% endfor %}
+
+    {% block server_locations %}
+    {# locations are sorted roughly in nginx's order of precedence #}
+    # Exact match locations
+    # No other locations are checked if one of these matches.
+    {% for location, location_configuration in _vhost.locations.items() if location.startswith('=') %}
+    location {{ location }} {
+        {{ location_block(location_configuration) }}
+    }
+
+    {% endfor %}
+    {% if _vhost.use_php | bool %}
+    {% for path in [nginx_php_status_path | default(false), nginx_php_ping_path | default(false)] %}
+    {% if path and path not in _vhost.locations | map('regex_replace', '^(=|~|~\*|\^~) *', '') | list %}
+    location = {{ path }} {
+        {% if nginx_php_monitor_ips is defined %}
+        {% for ip in [nginx_php_monitor_ips] | flatten %}
+        allow {{ ip }};
+        {% endfor %}
+        deny all;
+        {% endif %}
+        access_log off;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_pass unix:{{ nginx_pidfile['php'] | dirname | quote }}/php-fpm.sock;
+    }
+
+    {% endif %}
+    {% endfor %}
+    {% endif %}
+
+    # Prefix match locations that explicitly prevent further checks for regex matches
+    # The longest matching prefix is used.
+    {% for location, location_configuration in _vhost.locations.items() if location.startswith('^~') %}
+    location {{ location }} {
+        {{ location_block(location_configuration) }}
+    }
+
+    {% endfor %}
+    {% for location in _vhost.blocked_locations %}
+    location ^~ {{ location }} {
+        return 404;
+    }
+
+    {% endfor %}
+
+    # Regex match locations
+    # The first matching regex location is used.
+    location ~ /\. {
+        # Deny access to all hidden files and directories.
+        return 404;
+    }
+
+    location ~ (~|.bak)$ {
+        # Deny access to backup files.
+        return 404;
+    }
+
+    {% block server_php %}
+    {% if _vhost.use_php %}
+    location ~ ^(.+?\.php)(/.*)?$ {
+        # Pass .php files to PHP.
+        # Ensure that the requested .php file actually exists.
+        try_files $1 =404;
+        fastcgi_split_path_info ^(.+?\.php)(/.*)?$;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param PATH_INFO $fastcgi_path_info;
+        # Discard the request proxy header, if any (https://httpoxy.org/).
+        fastcgi_param HTTP_PROXY "";
+        {% if _vhost.use_tls | bool %}
+        fastcgi_param HTTPS on;
+        {% endif %}
+        fastcgi_param PHP_VALUE "session.cookie_secure = {{ _vhost.use_tls | bool | ternary('On', 'Off') }}
+                                 session.cookie_domain = $host";
+        fastcgi_read_timeout {{ nginx_php_timeout }};
+        fastcgi_pass unix:{{ nginx_pidfile['php'] | dirname | quote }}/php-fpm.sock;
+        {% if _vhost.error_page is defined %}
+        # Pass status codes above 300 to nginx for processing with the error_page directives above.
+        fastcgi_intercept_errors on;
+        {% endif %}
+        {% for opt in _vhost.php_extra_options %}
+        {{ opt }};
+        {% endfor %}
+    }
+
+    {% endif %}
+    {% endblock %}
+    {% block server_static_assets %}
+    {% if not _vhost.log_static_assets | bool or nginx_gzip_static | bool %}
+    location ~ {{ _vhost.static_assets | default() }} {
+        {% if not _vhost.log_static_assets | bool %}
+        access_log off;
+        {% endif %}
+        {% if nginx_gzip_static | bool %}
+        location ~ \.(css|js|txt|html|htm|xhtml|xml|json|svg)$ {
+            gzip_static on;
+        }
+        {% endif %}
+    }
+
+    {% endif %}
+    {% endblock %}
+    {% for location, location_configuration in _vhost.locations.items() if location.startswith('~') or location.startswith('~*') %}
+    location {{ location }} {
+        {{ location_block(location_configuration) }}
+    }
+
+    {% endfor %}
+
+    {% for location, location_configuration in _vhost.locations.items() if location.startswith('/') %}
+    {% if loop.first %}
+    # Prefix match locations
+    # The longest matching prefix is used.
+    {% endif %}
+    location {{ location }} {
+        {{ location_block(location_configuration) }}
+    }
+
+    {% endfor %}
+
+    {% for location, location_configuration in _vhost.locations.items() if location.startswith('@') %}
+    {% if loop.first %}
+    # Named locations
+    # These are not compared to the URL at all.
+    {% endif %}
+    location {{ location }} {
+        {{ location_block(location_configuration) }}
+    }
+
+    {% endfor %}
+    {% endblock %}
+}

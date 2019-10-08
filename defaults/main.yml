@@ -1,0 +1,32 @@
+---
+nginx_extra_groups: []
+nginx_extra_packages: []
+nginx_writable_paths: []
+nginx_inaccessible_paths: []
+nginx_worker_processes: "{{ ansible_facts['processor_vcpus'] }}"
+nginx_tls13_only: false
+nginx_ciphers: 'AESGCM:CHACHA20:!aNULL:!RSA:!PSK'
+nginx_max_body_size: 1
+nginx_keepalive_timeout: 65
+nginx_gzip_static: true
+nginx_gzip_dynamic: true
+nginx_access_log: false
+nginx_access_log_options: ''
+nginx_ocsp_stapling: true
+nginx_security_headers: {}
+nginx_caching_policy:
+  default: 'off'
+nginx_vhosts: []
+nginx_php_process_manager: 'dynamic'
+nginx_php_max_children: 5
+nginx_php_min_spare_children: 1
+nginx_php_max_spare_children: 3
+nginx_php_max_requests: 0
+nginx_php_timeout: 30
+nginx_php_process_idle_timeout: 10
+nginx_php_timezone: "{{ timezone }}"
+nginx_php_error_log: 'syslog'
+nginx_php_enabled_functions: []
+nginx_php_zend_extensions: []
+nginx_php_extensions: []
+nginx_php_extra_options: {}

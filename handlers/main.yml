@@ -1,0 +1,31 @@
+---
+- name: 'reload service files'
+  systemd:
+    daemon_reload: true
+  listen: nginx_reload_service_files
+  when: "ansible_facts['service_mgr'] == 'systemd'"
+
+- name: 'restart nginx'
+  service:
+    name: "{{ nginx_service_name['nginx'] }}"
+    state: "{{ ansible_facts['is_chroot'] | ternary(omit, 'restarted') }}"
+
+- name: 'reload nginx'
+  service:
+    name: "{{ nginx_service_name['nginx'] }}"
+    state: "{{ ansible_facts['is_chroot'] | ternary(omit, 'reloaded') }}"
+
+- name: 'restart php-fpm'
+  service:
+    name: "{{ nginx_service_name['php'] }}"
+    state: "{{ ansible_facts['is_chroot'] | ternary(omit, 'restarted') }}"
+
+- name: 'reload php-fpm'
+  service:
+    name: "{{ nginx_service_name['php'] }}"
+    state: "{{ ansible_facts['is_chroot'] | ternary(omit, 'reloaded') }}"
+
+- name: 'update nginx compressed static files'
+  command: '/usr/local/sbin/update_gzip_static.sh'
+  listen: 'nginx_update_gzip_static'
+  when: "nginx_gzip_static | bool"

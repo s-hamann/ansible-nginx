@@ -1,0 +1,55 @@
+#!/bin/sh
+{# vim: filetype=sh.jinja2 #}
+# {{ ansible_managed }}
+
+# This script updates precompressed static file served by nginx.
+
+# compress these file types
+filetypes=".*\.\(css\|js\|txt\|html\|htm\|xhtml\|xml\|json\|svg\)$"
+# do not compress very small files
+min_length='1024'
+
+# set restrictive permissions for new files to avoid race conditions before the chmod command
+umask 077
+
+compress() {
+    # Usage: compress <filename>
+    plainfile="$1"
+    zipfile="${plainfile}.gz"
+    tmpfile="$(mktemp)"
+    gzip -9 -c -- "${plainfile}" > "${tmpfile}"
+    # check if the compressed file is at least 10% smaller
+    if [ "$(($(stat -c '%s' "${plainfile}") * 90 / 100))" -le "$(stat -c '%s' "${tmpfile}")" ]; then
+        echo "${zipfile} did not compress well, discarding it"
+        rm -f -- "${tmpfile}"
+    else
+        chown -- "$(stat -c '%U:%G' "${plainfile}")" "${tmpfile}"
+        chmod -- "$(stat -c '%a' "${plainfile}")" "${tmpfile}"
+        touch -r "${plainfile}" -- "${tmpfile}"
+        mv -- "${tmpfile}" "${zipfile}"
+    fi
+}
+
+# remove old compressed files that are not needed anymore
+find {{ nginx_vhosts | selectattr('root', 'defined') | map(attribute='root') | map('quote') | join(' ') }} -type f -name "*.gz" | while read -r zipfile; do
+    plainfile="${zipfile%.gz}"
+    if [ ! -e "${plainfile}" ]; then
+        echo "Removing stale ${zipfile}"
+        rm -- "${zipfile}"
+    fi
+done
+
+# create new compressed files
+find {{ nginx_vhosts | selectattr('root', 'defined') | map(attribute='root') | map('quote') | join(' ') }} -type f -regex "${filetypes}" -size +${min_length}c | while read -r plainfile; do
+    zipfile="${plainfile}.gz"
+    if [ -e "${zipfile}" ]; then
+        if [ "$(stat -c '%Y' -- "${plainfile}")" -gt "$(stat -c '%Y' -- "${zipfile}")" ]; then
+            echo "${zipfile} outdated, regenerating"
+            rm -f -- "${zipfile}"
+            compress "${plainfile}"
+        fi
+    else
+        echo "${zipfile} is missing, creating it"
+        compress "${plainfile}"
+    fi
+done

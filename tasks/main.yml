@@ -1,0 +1,288 @@
+---
+- block:
+  - name: 'determine latest PHP version'
+    command: "equery --quiet --no-color list --portage-tree --overlay-tree --format='$mask$slot' dev-lang/php"
+    register: _equery_php
+    changed_when: false
+
+  - name: 'set PHP version to use'
+    set_fact:
+      nginx_php_version: "{{ _equery_php.stdout_lines | map('regex_search', '^ *[0-9]+\\.[0-9]+') | select | list | last | trim }}"
+
+  when: "nginx_php_version is not defined and ansible_facts['pkg_mgr'] == 'portage'"
+
+- name: 'gather os specific variables'
+  include_vars: '{{ item }}'
+  with_first_found:
+    - "{{ ansible_facts['distribution'] }}-{{ ansible_facts['distribution_major_version'] }}.yml"
+    - "{{ ansible_facts['distribution'] }}.yml"
+    - "{{ ansible_facts['os_family'] }}.yml"
+    - 'default.yml'
+
+- name: 'check for optional feature support'
+  set_fact:
+    _use_tls: "{{ nginx_vhosts | selectattr('use_tls', 'defined') | map(attribute='use_tls') | list is any }}"
+    _use_php: "{{ nginx_vhosts | selectattr('use_php', 'defined') | map(attribute='use_php') | list is any }}"
+
+- name: 'determine required packages'
+  set_fact:
+    _package_list: "{{ [nginx_packages['nginx']] | union(_use_php | ternary([nginx_packages['php']] | union((nginx_php_extensions + nginx_php_zend_extensions) | select('in', nginx_packages) | map('extract', nginx_packages) | flatten), [])) | union(nginx_extra_packages | default([])) }}"
+
+- name: 'set required USE flags'
+  block:
+
+  - name: 'determine USE flags for www-servers/nginx'
+    set_fact:
+      _use_flags: "{{ _use_flags | default(['http'] + nginx_extra_use_flags['nginx'] | default([])) + item.flags }}"
+    loop:
+      - flags:
+          - 'http2'
+          - 'ssl'
+        when: "{{ _use_tls }}"
+      - flags:
+          - 'nginx_modules_http_fastcgi'
+        when: "{{ _use_php }}"
+      - flags:
+          - 'nginx_modules_http_gzip'
+        when: "{{ nginx_gzip_dynamic | bool }}"
+      - flags:
+          - 'nginx_modules_http_gzip_static'
+        when: "{{ nginx_gzip_static | bool }}"
+    loop_control:
+      label: "{{ item.flags }}"
+    when: "item.when | bool"
+
+  - name: 'set USE flags for www-servers/nginx'
+    lineinfile:
+      path: '/etc/portage/package.use/www'
+      line: "www-servers/nginx {{ _use_flags | sort | unique | join(' ') }}"
+      regexp: '^www-servers/nginx\s'
+      create: true
+      owner: root
+      group: root
+      mode: 0644
+      state: present
+
+  - name: 'set USE flags for app-eselect/eselect-php'
+    lineinfile:
+      path: '/etc/portage/package.use/app'
+      line: 'app-eselect/eselect-php fpm'
+      create: true
+      owner: root
+      group: root
+      mode: 0644
+      state: present
+    when: "_use_php"
+
+  - name: "set USE flags for {{ nginx_packages['php'] }}"
+    lineinfile:
+      path: '/etc/portage/package.use/dev'
+      line: "{{ nginx_packages['php'] | replace(':' ~ nginx_php_version, '') }} {{ ['fpm'] | union((nginx_php_extensions + nginx_php_zend_extensions) | select('in', nginx_use_flags['php'] | default({})) | map('extract', nginx_use_flags['php'] | default({})) | flatten) | union(nginx_extra_use_flags['php'] | default([])) | sort | join(' ') }}"
+      regexp: "^{{ nginx_packages['php'] | replace(':' ~ nginx_php_version, '') | regex_escape }}\\s"
+      create: true
+      owner: root
+      group: root
+      mode: 0644
+      state: present
+    when: "_use_php"
+
+  - name: 'set global PHP_TARGETS'
+    lineinfile:
+      path: '/etc/portage/make.conf'
+      line: "PHP_TARGETS='php{{ nginx_php_version | replace('.', '-') }}'"
+      regexp: "^PHP_TARGETS="
+      state: present
+
+  when: "ansible_facts['pkg_mgr'] == 'portage'"
+
+- name: 'install packages'
+  package:
+    name: "{{ _package_list }}"
+    changed_use: "{{ (ansible_facts['pkg_mgr'] == 'portage') | ternary(true, omit) }}"
+    state: present
+
+- name: 'eselect PHP'
+  command: "eselect php set fpm php{{ nginx_php_version }}"
+  notify: 'restart php-fpm'
+  when: "ansible_facts['pkg_mgr'] == 'portage'"
+
+- name: 'determine log directories for nginx'
+  set_fact:
+    _log_paths: "{{ (
+                     [ nginx_access_log, nginx_error_log ] +
+                     nginx_vhosts | map(attribute='error_log') | select('defined') | list +
+                     nginx_vhosts | map(attribute='access_log') | select('defined') | list +
+                     nginx_vhosts | map(attribute='locations') | map(attribute='access_log') | select('defined') | list
+                     ) | select | reject('in', ['off', 'Off', 'stderr']) | reject('match', 'syslog:') | map('dirname') | list }}"
+
+- name: "harden {{ nginx_service_name['nginx'] }}.service"
+  block:
+    - name: "create override directory for {{ nginx_service_name['nginx'] }}.service"
+      file:
+        path: "/etc/systemd/system/{{ nginx_service_name['nginx'] }}.service.d/"
+        state: directory
+        owner: root
+        group: root
+        mode: 0755
+
+    - name: "install override file for {{ nginx_service_name['nginx'] }}.service"
+      template:
+        dest: "/etc/systemd/system/{{ nginx_service_name['nginx'] }}.service.d/override.conf"
+        src: 'nginx_override.conf.j2'
+        owner: root
+        group: root
+        mode: 0644
+      notify:
+        - 'nginx_reload_service_files'
+        - 'restart nginx'
+
+    - name: "harden {{ nginx_service_name['php'] }}.service"
+      block:
+        - name: "create override directory for {{ nginx_service_name['php'] }}.service"
+          file:
+            path: "/etc/systemd/system/{{ nginx_service_name['php'] }}.service.d/"
+            state: directory
+            owner: root
+            group: root
+            mode: 0755
+
+        - name: "install override file for {{ nginx_service_name['php'] }}.service"
+          template:
+            dest: "/etc/systemd/system/{{ nginx_service_name['php'] }}.service.d/override.conf"
+            src: 'php-fpm_override.conf.j2'
+            owner: root
+            group: root
+            mode: 0644
+          notify:
+            - 'nginx_reload_service_files'
+            - 'restart php-fpm'
+
+      when: "_use_php"
+
+  when: "ansible_facts['service_mgr'] == 'systemd'"
+
+# If the unit files changed, reload them now.
+- meta: flush_handlers
+
+- name: 'prevent PHP from processing additional ini files (OpenRC)'
+  lineinfile:
+    path: "/etc/conf.d/{{ nginx_service_name['php'] }}"
+    line: 'export PHP_INI_SCAN_DIR='
+    state: present
+    create: true
+    owner: root
+    group: root
+    mode: 0644
+  when: "ansible_facts['service_mgr'] == 'openrc' and _use_php"
+
+- name: "add {{ nginx_user }} to extra groups"
+  user:
+    name: "{{ nginx_user }}"
+    groups: "{{ nginx_extra_groups }}"
+    append: true
+  notify:
+    - 'restart nginx'
+    - 'restart php-fpm'
+  when: "[nginx_extra_groups | default([])] | flatten | count"
+
+- name: 'install update_gzip_static.sh'
+  template:
+    dest: '/usr/local/sbin/update_gzip_static.sh'
+    src: 'update_gzip_static.sh.j2'
+    owner: root
+    group: root
+    mode: 0755
+  when: "nginx_gzip_static | bool"
+
+- name: 'install php-fpm.conf'
+  template:
+    dest: "{{ nginx_config_dir['php'] }}php-fpm.conf"
+    src: 'php-fpm.conf.j2'
+    owner: root
+    group: root
+    mode: 0644
+  notify: 'reload php-fpm'
+
+- name: 'install php.ini'
+  template:
+    dest: "{{ nginx_config_dir['php'] }}php.ini"
+    src: 'php.ini.j2'
+    owner: root
+    group: root
+    mode: 0644
+  notify: 'reload php-fpm'
+
+- name: 'create configuration directories'
+  file:
+    path: "{{ nginx_config_dir['nginx'] }}/{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  loop:
+    - 'sites-available'
+    - 'sites-enabled'
+    - 'modules-available'
+    - 'modules-enabled'
+
+- name: 'create log directories'
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ nginx_user }}"
+    group: "{{ nginx_group }}"
+    mode: 0755
+  loop: "{{ _log_paths + (nginx_php_error_log | default(false) and nginx_php_error_log != 'syslog') | ternary([nginx_php_error_log | dirname], []) | unique }}"
+
+- name: 'create Diffie-Hellman parameters'
+  command: "openssl dhparam -out '{{ nginx_config_dir['nginx'] }}dhparams.pem' 2048"
+  args:
+    creates: "{{ nginx_config_dir['nginx'] }}dhparams.pem"
+  when: "_use_tls"
+  notify: 'reload nginx'
+
+- name: 'install nginx.conf'
+  template:
+    dest: "{{ nginx_config_dir['nginx'] }}nginx.conf"
+    src: "{{ nginx_config_template | default('nginx.conf.j2') }}"
+    owner: root
+    group: root
+    mode: 0644
+  notify: 'reload nginx'
+
+- include_tasks: vhost.yml
+  loop: "{{ nginx_vhosts }}"
+  loop_control:
+    loop_var: vhost
+    label: "{{ vhost.server_name | default('<empty host header>') }}"
+
+- name: 'find enabled sites'
+  find:
+    path: "{{ nginx_config_dir['nginx'] }}sites-enabled/"
+    file_type: link
+    recurse: false
+  register: _sites_enabled
+
+- name: 'disable unmanaged sites'
+  file:
+    path: "{{ nginx_config_dir['nginx'] }}sites-enabled/{{ file | basename }}"
+    state: absent
+  loop: "{{ _sites_enabled.files | map(attribute='path') | default([]) | list }}"
+  loop_control:
+    loop_var: file
+    label: "{{ file | basename }}"
+  when: "file | basename not in nginx_vhosts | map(attribute='filename')"
+  notify: 'reload nginx'
+
+- name: 'enable and start php-fpm'
+  service:
+    name: "{{ nginx_service_name['php'] }}"
+    enabled: true
+    state: "{{ ansible_facts['is_chroot'] | ternary(omit, 'started') }}"
+  when: "_use_php"
+
+- name: 'enable and start nginx'
+  service:
+    name: "{{ nginx_service_name['nginx'] }}"
+    enabled: true
+    state: "{{ ansible_facts['is_chroot'] | ternary(omit, 'started') }}"
