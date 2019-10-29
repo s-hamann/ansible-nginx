@@ -24,14 +24,5 @@ nginx_packages:
   sqlite3: 'php-sqlite'
   tidy: 'php-tidy'
   xsl: 'php-xsl'
-nginx_service_name:
-  nginx: 'nginx'
-  php: 'php-fpm'
 nginx_user: 'http'
 nginx_group: 'http'
-nginx_config_dir:
-  nginx: '/etc/nginx/'
-  php: '/etc/php/'
-nginx_pidfile:
-  nginx: '/run/nginx/nginx.pid'
-  php: '/run/php-fpm/php-fpm.pid'

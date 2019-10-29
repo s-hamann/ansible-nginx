@@ -1,4 +1,5 @@
 nginx_packages:
+  nginx: 'nginx'
   php: 'php-fpm'
 nginx_service_name:
   nginx: 'nginx'
