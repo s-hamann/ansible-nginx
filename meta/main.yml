@@ -1,0 +1,35 @@
+galaxy_info:
+  repo_name: nginx
+  author: Sebastian Hamann
+  description: Nginx (and optionally PHP) setup
+  license: MIT
+
+  min_ansible_version: 2.6
+
+  platforms:
+    - name: Gentoo
+      versions:
+        - any
+    - name: Debian
+      versions:
+        - buster
+    - name: Alpine
+      versions:
+        - any
+    - name: ArchLinux
+      versions:
+        - any
+    - name: GenericLinux
+      versions:
+        - any
+    - name: GenericUNIX
+      versions:
+        - any
+
+  galaxy_tags:
+    - nginx
+    - php
+    - security
+    - web
+
+dependencies: []
