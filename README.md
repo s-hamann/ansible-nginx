@@ -27,8 +27,8 @@ Role Variables
 * `nginx_extra_use_flags`  
   A dictionary with additional use flags.
   The following keys are valid:
-    * `nginx`
-    * `php`
+    * `nginx`  
+    * `php`  
   Each key holds a list of USE flags to enable or disable for the respective software in addition to those deemed necessary by this role.
   This can be used, for example, to ensure that certain PHP extensions are present.
   Empty by default.
@@ -111,8 +111,8 @@ Role Variables
 * `nginx_extra_options`  
   A dictionary with additional options.
   The following keys are valid:
-    * `nginx` (for the main part in `nginx.conf`)
-    * `nginx_http` (for the `http` block in `nginx.conf`)
+    * `nginx` (for the main part in `nginx.conf`)  
+    * `nginx_http` (for the `http` block in `nginx.conf`)  
   Each key in turn holds a list of options for the respective configuration file or file section.
 * `nginx_vhosts`  
   A list of dictionaries describing vhost configurations.
@@ -277,9 +277,9 @@ The following options are specific to PHP and are only used if at least one vhos
 * `nginx_php_extra_options`  
   Additional configuration options for PHP.
   This variable is a dictionary with the following keys:
-    * `php-fpm` (for the `global` section of `php-fpm.conf`)
-    * `php-fpm_pool` (for the pool section of `php-fpm.conf`)
-    * any other key is added to `php.ini` as a section named like the key
+    * `php-fpm` (for the `global` section of `php-fpm.conf`)  
+    * `php-fpm_pool` (for the pool section of `php-fpm.conf`)  
+    * any other key is added to `php.ini` as a section named like the key  
   The values are in turn dictionaries where keys are PHP configuration options for the appropriate section and values are the corresponding configuration values.
 
 Dependencies
