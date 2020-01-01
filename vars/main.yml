@@ -44,7 +44,12 @@ nginx_php_disabled_functions:
   - system
 nginx_php_default_options:
   php-fpm: {}
-  php-fpm_pool: {}
+  php-fpm_pool:
+    env[HOSTNAME]: "{{ ansible_facts['hostname'] }}"
+    env[PATH]: '/bin:/usr/bin'
+    env[TMP]: '/tmp'
+    env[TMPDIR]: '/tmp'
+    env[TEMP]: '/tmp'
   PHP:
     allow_url_fopen: 'Off'
     allow_url_include: 'Off'
