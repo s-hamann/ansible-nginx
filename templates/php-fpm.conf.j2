@@ -5,7 +5,7 @@
 pid = {{ nginx_pidfile['php'] }}
 error_log = {{ nginx_php_error_log }}
 rlimit_core = 0
-{% for k, v in (nginx_php_extra_options['php-fpm'] | default({})).items() %}
+{% for k, v in (nginx_php_default_options['php-fpm'] | combine(nginx_php_extra_options['php-fpm'] | default({}))).items() %}
 {{ k }} = {{ v }}
 {% endfor %}
 
@@ -44,6 +44,6 @@ request_terminate_timeout = {{ nginx_php_timeout }}
 rlimit_core = 0
 security.limit_extensions = .php
 
-{% for k, v in (nginx_php_extra_options['php-fpm_pool'] | default({})).items() %}
+{% for k, v in (nginx_php_default_options['php-fpm_pool'] | combine(nginx_php_extra_options['php-fpm_pool'] | default({}))).items() %}
 {{ k }} = {{ v }}
 {% endfor %}
