@@ -236,6 +236,12 @@ The following options are specific to PHP and are only used if at least one vhos
   This sets the time (in seconds) after which idle processes are killed to free up resources.
   This setting is ignored when using a different process manager.
   The default is `10` seconds.
+* `nginx_php_user`  
+  The name of the system user account to run PHP as.
+  Defaults to the same account as nginx.
+* `nginx_php_group`  
+  The name of the system group to run PHP as.
+  Defaults to the same group as nginx.
 * `nginx_php_max_requests`  
   Respawn PHP processes after handling this number of requests.
   The default value `0` disables this.

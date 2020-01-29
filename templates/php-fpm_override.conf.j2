@@ -1,7 +1,7 @@
 {# vim: filetype=systemd.jinja2 #}
 [Service]
-User={{ nginx_user }}
-Group={{ nginx_group }}
+User={{ nginx_php_user }}
+Group={{ nginx_php_group }}
 PIDFile={{ nginx_pidfile['php'] | quote }}
 RuntimeDirectory={{ nginx_pidfile['php'] | dirname | relpath('/run') | quote }}
 # Disable searching and processing additional ini files

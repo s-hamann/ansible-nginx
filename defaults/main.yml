@@ -17,6 +17,8 @@ nginx_security_headers: {}
 nginx_caching_policy:
   default: 'off'
 nginx_vhosts: []
+nginx_php_user: "{{ nginx_user }}"
+nginx_php_group: "{{ nginx_group }}"
 nginx_php_process_manager: 'dynamic'
 nginx_php_max_children: 5
 nginx_php_min_spare_children: 1
