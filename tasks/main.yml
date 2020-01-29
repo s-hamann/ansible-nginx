@@ -28,6 +28,10 @@
     _use_tls: "{{ nginx_vhosts | selectattr('use_tls', 'defined') | map(attribute='use_tls') | list is any }}"
     _use_php: "{{ nginx_vhosts | selectattr('use_php', 'defined') | map(attribute='use_php') | list is any }}"
 
+- name: 'resolve PHP extension dependencies'
+  set_fact:
+    nginx_php_extensions: "{{ nginx_php_extensions | select('in', nginx_php_extension_dependencies) | map('extract', nginx_php_extension_dependencies) | flatten | union(nginx_php_extensions) }}"
+
 - name: 'determine required packages'
   set_fact:
     _package_list: "{{ [nginx_packages['nginx']] | union(_use_php | ternary([nginx_packages['php']] | union((nginx_php_extensions + nginx_php_zend_extensions) | select('in', nginx_packages) | map('extract', nginx_packages) | flatten), [])) | union(nginx_extra_packages | default([])) }}"

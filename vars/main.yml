@@ -93,3 +93,33 @@ nginx_php_default_options:
     mail.add_x_header: 'Off'
   Assertion:
     zend.assertions: '-1'
+nginx_php_extension_dependencies:
+  exif:
+    - mbstring
+  mysqli:
+    - openssl
+    - mysqlnd
+  mysqlnd:
+    - openssl
+  pdo_dblib:
+    - pdo
+  pdo_firebird:
+    - pdo
+  pdo_mysql:
+    - pdo
+    - openssl
+    - mysqlnd
+  pdo_odbc:
+    - pdo
+  pdo_pgsql:
+    - pdo
+  pdo_sqlite:
+    - pdo
+  wddx:
+    - xml
+  xmlreader:
+    - dom
+  xmlrpc:
+    - xml
+  xsl:
+    - dom
