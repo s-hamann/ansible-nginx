@@ -198,7 +198,7 @@ server {
     {% endif %}
     {% endblock %}
     {% block server_static_assets %}
-    {% if not _vhost.log_static_assets | bool or nginx_gzip_static | bool %}
+    {% if not _vhost.log_static_assets | bool or nginx_gzip_static | bool or _vhost.static_assets | count %}
     location ~ {{ _vhost.static_assets | default() }} {
         {% if not _vhost.log_static_assets | bool %}
         access_log off;
@@ -206,8 +206,10 @@ server {
         {% if nginx_gzip_static | bool %}
         location ~ \.(css|js|txt|html|htm|xhtml|xml|json|svg)$ {
             gzip_static on;
+            {{ location_block({'extra_options': _vhost.static_extra_options}) }}
         }
         {% endif %}
+        {{ location_block({'extra_options': _vhost.static_extra_options}) }}
     }
 
     {% endif %}
