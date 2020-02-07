@@ -12,3 +12,4 @@ nginx_config_dir:
 nginx_pidfile:
   nginx: '/run/nginx/nginx.pid'
   php: '/run/php-fpm/php-fpm.pid'
+nginx_php_cli: 'php'

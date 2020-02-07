@@ -114,6 +114,26 @@
   notify: 'restart php-fpm'
   when: "ansible_facts['pkg_mgr'] == 'portage'"
 
+- name: 'check for PHP command-line interpreter'
+  command: 'which {{ nginx_php_cli | quote }}'
+  changed_when: false
+  ignore_errors: true
+  register: _which_php
+  when: "_use_php"
+
+- name: 'get built-in PHP extensions'
+  command: "{{ nginx_php_cli | quote }} -c /dev/null -r 'foreach (get_loaded_extensions() as $ext) echo $ext . PHP_EOL;'"
+  environment:
+    PHP_INI_SCAN_DIR:
+  changed_when: false
+  register: _php_built_in_extensions
+  when: "_use_php and _which_php is not failed"
+
+- name: 'remove built-in PHP extensions from dynamically loaded list'
+  set_fact:
+    nginx_php_extensions: "{{ nginx_php_extensions | difference(_php_built_in_extensions.stdout_lines) }}"
+  when: "_use_php and _which_php is not failed"
+
 - name: 'determine log directories for nginx'
   set_fact:
     _log_paths: "{{ (
