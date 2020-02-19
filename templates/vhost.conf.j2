@@ -171,9 +171,9 @@ server {
     {% if _vhost.use_php %}
     location ~ ^(.+?\.php)(/.*)?$ {
         # Pass .php files to PHP.
-        # Ensure that the requested .php file actually exists.
-        try_files $1 =404;
         fastcgi_split_path_info ^(.+?\.php)(/.*)?$;
+        # Ensure that the requested .php file actually exists.
+        try_files $fastcgi_script_name =404;
         include fastcgi_params;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
         fastcgi_param PATH_INFO $fastcgi_path_info;
