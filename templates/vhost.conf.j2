@@ -157,16 +157,6 @@ server {
 
     # Regex match locations
     # The first matching regex location is used.
-    location ~ /\. {
-        # Deny access to all hidden files and directories.
-        return 404;
-    }
-
-    location ~ (~|.bak)$ {
-        # Deny access to backup files.
-        return 404;
-    }
-
     {% block server_php %}
     {% if _vhost.use_php %}
     location ~ ^(.+?\.php)(/.*)?$ {
@@ -197,6 +187,16 @@ server {
 
     {% endif %}
     {% endblock %}
+    location ~ /\. {
+        # Deny access to all hidden files and directories.
+        return 404;
+    }
+
+    location ~ (~|.bak)$ {
+        # Deny access to backup files.
+        return 404;
+    }
+
     {% block server_static_assets %}
     {% if not _vhost.log_static_assets | bool or nginx_gzip_static | bool or _vhost.static_assets | count %}
     location ~ {{ _vhost.static_assets | default() }} {
