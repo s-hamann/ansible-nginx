@@ -1,6 +1,6 @@
 #jinja2: lstrip_blocks: True
 {# vim: filetype=nginx.jinja2 #}
-# {{ ansible_managed }}
+{{ ansible_managed | comment }}
 {% set _disabled_security_headers = _vhost.disabled_security_headers | map('lower') | list %}
 {% if not _vhost.use_tls | bool %}
 {{ _disabled_security_headers.append('strict-transport-security') }}
