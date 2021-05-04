@@ -243,6 +243,7 @@
     group: root
     mode: 0644
   notify: 'reload php-fpm'
+  when: "_use_php"
 
 - name: 'install php.ini'
   template:
@@ -252,6 +253,7 @@
     group: root
     mode: 0644
   notify: 'reload php-fpm'
+  when: "_use_php"
 
 - name: 'create configuration directories'
   file:
@@ -282,7 +284,7 @@
     owner: "{{ nginx_php_user }}"
     group: "{{ nginx_php_group }}"
     mode: 0755
-  when: "nginx_php_error_log | default(false) and nginx_php_error_log != 'syslog'"
+  when: "_use_php and nginx_php_error_log | default(false) and nginx_php_error_log != 'syslog'"
 
 - name: 'create Diffie-Hellman parameters'
   command: "openssl dhparam -out '{{ nginx_config_dir['nginx'] }}dhparams.pem' 2048"
