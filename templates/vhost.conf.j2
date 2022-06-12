@@ -9,31 +9,31 @@
 {% macro security_headers() -%}
     # Security headers.
     {% for header, value in (nginx_default_security_headers | combine(nginx_security_headers) | combine(_vhost.security_headers)).items() if header | lower not in _disabled_security_headers %}
-    add_header {{ header }} "{{ value }}" always;
+add_header {{ header }} "{{ value }}" always;
     {% endfor %}
 {% endmacro %}
 {% macro location_block(location) %}
     {% if location.return is defined %}
-        return {{ location.return }};
+return {{ location.return }};
     {% endif %}
     {% if location.gzip_dynamic is defined %}
-        gzip {{ location.gzip_dynamic | bool | ternary('on', 'off') }};
+gzip {{ location.gzip_dynamic | bool | ternary('on', 'off') }};
     {% endif %}
     {% if location.gzip_static is defined %}
-        gzip_static {{ location.gzip_static | bool | ternary('on', 'off') }};
+gzip_static {{ location.gzip_static | bool | ternary('on', 'off') }};
     {% endif %}
     {% if location.access_log is defined %}
         {% if location.access_log | bool %}
-        access_log {{ location.access_log }}{% if nginx_log_format is defined %} main{% endif %};
+access_log {{ location.access_log }}{% if nginx_log_format is defined %} main{% endif %};
         {% else %}
-        access_log off;
+access_log off;
         {% endif %}
     {% endif %}
     {% if location.extra_options | default([]) | map('regex_search', '^\s*add_header\s') | select | list | count > 0 %}
-    {{ security_headers() }}
+        {{- security_headers() }}
     {% endif %}
     {% for opt in location.extra_options | default([]) %}
-    {{ opt }};
+        {{- opt }};
     {% endfor %}
 {% endmacro %}
 
@@ -104,7 +104,7 @@ server {
     {% endif %}
     {% endblock %}
 
-    {{ security_headers() }}
+    {{ security_headers() | indent(4) }}
 
     {% for opt in _vhost.extra_options | default([]) %}
     {{ opt }};
@@ -116,7 +116,7 @@ server {
     # No other locations are checked if one of these matches.
     {% for location, location_configuration in _vhost.locations.items() if location.startswith('=') %}
     location {{ location }} {
-        {{ location_block(location_configuration) }}
+        {{ location_block(location_configuration) | indent(8) }}
     }
 
     {% endfor %}
@@ -144,7 +144,7 @@ server {
     # The longest matching prefix is used.
     {% for location, location_configuration in _vhost.locations.items() if location.startswith('^~') %}
     location {{ location }} {
-        {{ location_block(location_configuration) }}
+        {{ location_block(location_configuration) | indent(8) }}
     }
 
     {% endfor %}
@@ -206,17 +206,17 @@ server {
         {% if nginx_gzip_static | bool %}
         location ~ \.(css|js|txt|html|htm|xhtml|xml|json|svg)$ {
             gzip_static on;
-            {{ location_block({'extra_options': _vhost.static_extra_options}) }}
+            {{ location_block({'extra_options': _vhost.static_extra_options}) | indent(12) }}
         }
         {% endif %}
-        {{ location_block({'extra_options': _vhost.static_extra_options}) }}
+        {{ location_block({'extra_options': _vhost.static_extra_options}) | indent(8) }}
     }
 
     {% endif %}
     {% endblock %}
     {% for location, location_configuration in _vhost.locations.items() if location.startswith('~') or location.startswith('~*') %}
     location {{ location }} {
-        {{ location_block(location_configuration) }}
+        {{ location_block(location_configuration) | indent(8) }}
     }
 
     {% endfor %}
@@ -227,7 +227,7 @@ server {
     # The longest matching prefix is used.
     {% endif %}
     location {{ location }} {
-        {{ location_block(location_configuration) }}
+        {{ location_block(location_configuration) | indent(8) }}
     }
 
     {% endfor %}
@@ -238,7 +238,7 @@ server {
     # These are not compared to the URL at all.
     {% endif %}
     location {{ location }} {
-        {{ location_block(location_configuration) }}
+        {{ location_block(location_configuration) | indent(8) }}
     }
 
     {% endfor %}
