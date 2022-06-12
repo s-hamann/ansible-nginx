@@ -161,8 +161,8 @@
         group: root
         mode: 0644
       notify:
-        - 'nginx_reload_service_files'
         - 'restart nginx'
+      register: _nginx_unit_override
 
     - name: "harden {{ nginx_service_name['php'] }}.service"
       block:
@@ -182,15 +182,18 @@
             group: root
             mode: 0644
           notify:
-            - 'nginx_reload_service_files'
             - 'restart php-fpm'
+          register: _php_unit_override
 
       when: "_use_php"
 
-  when: "ansible_facts['service_mgr'] == 'systemd'"
+    # If the unit files changed, reload them now.
+    - name: 'reload service files'
+      systemd:
+        daemon_reload: true
+      when: "_nginx_unit_override is changed or _php_unit_override is changed"
 
-# If the unit files changed, reload them now.
-- meta: flush_handlers
+  when: "ansible_facts['service_mgr'] == 'systemd'"
 
 - name: 'prevent PHP from processing additional ini files (OpenRC)'
   lineinfile:
