@@ -184,7 +184,7 @@ Role Variables
       If set to `false`, access to static assets (cf. `static_assets`) is not logged.
       Defaults to `true`.
     * `static_extra_options`  
-      A list of additional configuration options for the location block that handled static assets (cf. `static_assets`).
+      A list of additional configuration options for the location block that handles static assets (cf. `static_assets`).
       Optional.
     * `extra_options`  
       A list of additional configuration options for this vhost.
