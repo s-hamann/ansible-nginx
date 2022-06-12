@@ -1,5 +1,5 @@
 {# vim: filetype=dosini #}
-; {{ ansible_managed }}
+{{ ansible_managed | comment(decoration='; ') }}
 
 [global]
 pid = {{ nginx_pidfile['php'] }}
