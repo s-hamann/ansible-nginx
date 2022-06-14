@@ -1,4 +1,5 @@
 {# vim: filetype=systemd.jinja2 #}
+{{ ansible_managed | comment }}
 [Service]
 User={{ nginx_php_user }}
 Group={{ nginx_php_group }}
