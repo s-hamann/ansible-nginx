@@ -12,27 +12,37 @@ NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
 {% if nginx_php_error_log | default(false) and nginx_php_error_log != 'syslog' %}
-ReadWritePaths={{ nginx_php_error_log | dirname }}
+ReadWritePaths=-{{ nginx_php_error_log | dirname }}
 {% endif %}
-ReadWritePaths={{ [nginx_writable_paths] | flatten | unique | map('quote') | join(' ') }}
+{% for path in [nginx_writable_paths] | flatten | unique %}
+ReadWritePaths=-{{ path | quote }}
+{% endfor %}
 {% if nginx_inaccessible_paths | count %}
-InaccessiblePaths={{ [nginx_inaccessible_paths] | flatten | unique | map('quote') | join(' ') }}
+{% for path in [nginx_inaccessible_paths] | flatten | unique %}
+InaccessiblePaths=-{{ path | quote }}
+{% endfor %}
 {% endif %}
 {% if _use_tls %}
-InaccessiblePaths={{ nginx_vhosts | map(attribute='tls_cert_key') | select('defined') | map('dirname') | unique | map('quote') | join(' ') }}
+InaccessiblePaths=-{{ nginx_vhosts | map(attribute='tls_cert_key') | select('defined') | map('dirname') | unique | map('quote') | join(' ') }}
 {% endif %}
 PrivateTmp=true
 PrivateDevices=true
+{% if [nginx_extra_groups | default([])] | flatten | count == 0 %}
 PrivateUsers=true
+{% endif %}
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectKernelLogs=true
 ProtectControlGroups=true
+ProtectProc=invisible
+ProtectClock=true
+ProtectHostname=true
 LockPersonality=true
 MemoryDenyWriteExecute=true
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 RestrictNamespaces=true
 RestrictRealtime=true
+RestrictSUIDSGID=true
 SystemCallFilter=@system-service @basic-io @io-event @network-io madvise
 SystemCallFilter=~@aio @chown @keyring @memlock @privileged @resources @setuid
 SystemCallArchitectures=native
