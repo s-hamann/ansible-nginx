@@ -4,7 +4,6 @@
 {% set _disabled_security_headers = _vhost.disabled_security_headers | map('lower') | list %}
 {% if not _vhost.use_tls | bool %}
 {{ _disabled_security_headers.append('strict-transport-security') }}
-{{ _disabled_security_headers.append('expect-ct') }}
 {% endif %}
 {% macro security_headers() -%}
     # Security headers.
