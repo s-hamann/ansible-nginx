@@ -1,3 +1,4 @@
+---
 nginx_packages:
   nginx: 'nginx'
   php: 'php81-fpm'
