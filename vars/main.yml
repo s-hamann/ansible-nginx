@@ -10,7 +10,7 @@ nginx_vhost_defaults:
     use_php: false
     security_headers: {}
     disabled_security_headers: []
-    static_assets: '\.(css|js|txt|html|htm|xhtml|xml|json|svg|png|jpg|jpeg|gif|ico|map|woff2?|ttf)$'
+    static_assets: '\.(css|js|mjs|txt|html|htm|xhtml|xml|json|svg|png|jpg|jpeg|gif|ico|map|wasm|woff2?|ttf)$'
     log_static_assets: true
     static_extra_options: []
     locations: {}
