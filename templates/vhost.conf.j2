@@ -109,6 +109,9 @@ server {
     {{ opt }};
     {% endfor %}
 
+    {% block server_custom %}
+    {% endblock %}
+
     {% block server_locations %}
     {# locations are sorted roughly in nginx's order of precedence #}
     # Exact match locations
