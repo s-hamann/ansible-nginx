@@ -3,7 +3,7 @@
 [PHP]
 
 ; Disable certain functions for security reasons.
-disable_functions = {{ nginx_php_disabled_functions | difference(nginx_php_enabled_functions) | join(',') }}
+disable_functions = {{ nginx_php_disabled_functions | difference(nginx_php_enabled_functions) | sort | join(',') }}
 
 {% for k, v in (nginx_php_default_options['PHP'] | combine(nginx_php_extra_options['PHP'] | default({}))).items() %}
 {{ k }} = {{ v }}
@@ -13,10 +13,10 @@ disable_functions = {{ nginx_php_disabled_functions | difference(nginx_php_enabl
 ; Dynamic Extensions ;
 ;;;;;;;;;;;;;;;;;;;;;;
 
-{% for extension in nginx_php_zend_extensions %}
+{% for extension in nginx_php_zend_extensions | sort %}
 zend_extension={{ extension }}
 {% endfor %}
-{% for extension in nginx_php_extensions %}
+{% for extension in nginx_php_extensions | sort %}
 extension={{ extension }}
 {% endfor %}
 
