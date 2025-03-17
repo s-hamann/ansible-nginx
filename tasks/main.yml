@@ -112,6 +112,7 @@
 
 - name: 'Set active PHP version'
   ansible.builtin.command: "eselect php set fpm php{{ nginx_php_version }}"
+  changed_when: true
   notify: 'Restart php-fpm'
   when: "ansible_facts['pkg_mgr'] == 'portage'"
 

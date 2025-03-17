@@ -23,5 +23,7 @@
 
 - name: 'Update nginx compressed static files'
   ansible.builtin.command: '/usr/local/sbin/update_gzip_static.sh'
+  register: _update_gzip_static
+  changed_when: "_update_gzip_static.stdout != ''"
   listen: nginx_update_gzip_static
   when: "nginx_gzip_static | ansible.builtin.bool"
