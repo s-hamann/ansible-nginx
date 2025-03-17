@@ -1,6 +1,5 @@
 ---
 galaxy_info:
-  repo_name: nginx
   author: Sebastian Hamann
   description: Nginx (and optionally PHP) setup
   license: MIT
@@ -10,22 +9,22 @@ galaxy_info:
   platforms:
     - name: Gentoo
       versions:
-        - any
+        - all
     - name: Debian
       versions:
         - buster
     - name: Alpine
       versions:
-        - any
+        - all
     - name: ArchLinux
       versions:
-        - any
+        - all
     - name: GenericLinux
       versions:
-        - any
+        - all
     - name: GenericUNIX
       versions:
-        - any
+        - all
 
   galaxy_tags:
     - nginx
