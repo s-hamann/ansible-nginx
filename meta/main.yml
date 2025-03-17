@@ -17,9 +17,6 @@ galaxy_info:
     - name: Alpine
       versions:
         - all
-    - name: ArchLinux
-      versions:
-        - all
     - name: GenericLinux
       versions:
         - all
