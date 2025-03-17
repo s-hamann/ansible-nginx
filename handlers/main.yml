@@ -1,27 +1,27 @@
 ---
 - name: 'Restart nginx'
-  service:
+  ansible.builtin.service:
     name: "{{ nginx_service_name['nginx'] }}"
-    state: "{{ ansible_facts['is_chroot'] | ternary(omit, 'restarted') }}"
+    state: "{{ ansible_facts['is_chroot'] | ansible.builtin.ternary(omit, 'restarted') }}"
 
 - name: 'Reload nginx'
-  service:
+  ansible.builtin.service:
     name: "{{ nginx_service_name['nginx'] }}"
-    state: "{{ ansible_facts['is_chroot'] | ternary(omit, 'reloaded') }}"
+    state: "{{ ansible_facts['is_chroot'] | ansible.builtin.ternary(omit, 'reloaded') }}"
 
 - name: 'Restart php-fpm'
-  service:
+  ansible.builtin.service:
     name: "{{ nginx_service_name['php'] }}"
-    state: "{{ ansible_facts['is_chroot'] | ternary(omit, 'restarted') }}"
+    state: "{{ ansible_facts['is_chroot'] | ansible.builtin.ternary(omit, 'restarted') }}"
   when: "_use_php"
 
 - name: 'Reload php-fpm'
-  service:
+  ansible.builtin.service:
     name: "{{ nginx_service_name['php'] }}"
-    state: "{{ ansible_facts['is_chroot'] | ternary(omit, 'reloaded') }}"
+    state: "{{ ansible_facts['is_chroot'] | ansible.builtin.ternary(omit, 'reloaded') }}"
   when: "_use_php"
 
 - name: 'Update nginx compressed static files'
-  command: '/usr/local/sbin/update_gzip_static.sh'
+  ansible.builtin.command: '/usr/local/sbin/update_gzip_static.sh'
   listen: 'nginx_update_gzip_static'
-  when: "nginx_gzip_static | bool"
+  when: "nginx_gzip_static | ansible.builtin.bool"

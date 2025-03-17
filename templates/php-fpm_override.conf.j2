@@ -1,10 +1,10 @@
 {# vim: filetype=systemd.jinja2 #}
-{{ ansible_managed | comment }}
+{{ ansible_managed | ansible.builtin.comment }}
 [Service]
 User={{ nginx_php_user }}
 Group={{ nginx_php_group }}
 PIDFile={{ nginx_pidfile['php'] | quote }}
-RuntimeDirectory={{ nginx_pidfile['php'] | dirname | relpath('/run') | quote }}
+RuntimeDirectory={{ nginx_pidfile['php'] | ansible.builtin.dirname | ansible.builtin.relpath('/run') | ansible.builtin.quote }}
 # Disable searching and processing additional ini files
 Environment=PHP_INI_SCAN_DIR=
 # Apply principle of least privilege
@@ -13,22 +13,22 @@ NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
 {% if nginx_php_error_log | default(false) and nginx_php_error_log != 'syslog' %}
-ReadWritePaths=-{{ nginx_php_error_log | dirname }}
+ReadWritePaths=-{{ nginx_php_error_log | ansible.builtin.dirname }}
 {% endif %}
-{% for path in [nginx_writable_paths] | flatten | unique %}
-ReadWritePaths=-{{ path | quote }}
+{% for path in [nginx_writable_paths] | ansible.builtin.flatten | ansible.builtin.unique %}
+ReadWritePaths=-{{ path | ansible.builtin.quote }}
 {% endfor %}
 {% if nginx_inaccessible_paths | count %}
-{% for path in [nginx_inaccessible_paths] | flatten | unique %}
-InaccessiblePaths=-{{ path | quote }}
+{% for path in [nginx_inaccessible_paths] | ansible.builtin.flatten | ansible.builtin.unique %}
+InaccessiblePaths=-{{ path | ansible.builtin.quote }}
 {% endfor %}
 {% endif %}
 {% if _use_tls %}
-InaccessiblePaths=-{{ nginx_vhosts | map(attribute='tls_cert_key') | select('defined') | map('dirname') | unique | map('quote') | join(' ') }}
+InaccessiblePaths=-{{ nginx_vhosts | map(attribute='tls_cert_key') | select('defined') | map('ansible.builtin.dirname') | ansible.builtin.unique | map('ansible.builtin.quote') | join(' ') }}
 {% endif %}
 PrivateTmp=true
 PrivateDevices=true
-{% if [nginx_extra_groups | default([])] | flatten | count == 0 %}
+{% if [nginx_extra_groups | default([])] | ansible.builtin.flatten | count == 0 %}
 PrivateUsers=true
 {% endif %}
 ProtectKernelTunables=true

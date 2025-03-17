@@ -1,13 +1,13 @@
 #jinja2: lstrip_blocks: True
 {# vim: filetype=nginx.jinja2 #}
-{{ ansible_managed | comment }}
+{{ ansible_managed | ansible.builtin.comment }}
 {% set _disabled_security_headers = _vhost.disabled_security_headers | map('lower') | list %}
-{% if not _vhost.use_tls | bool %}
+{% if not _vhost.use_tls | ansible.builtin.bool %}
 {{ _disabled_security_headers.append('strict-transport-security') }}
 {% endif %}
 {% macro security_headers() -%}
     # Security headers.
-    {% for header, value in (nginx_default_security_headers | combine(nginx_security_headers) | combine(_vhost.security_headers)).items() if header | lower not in _disabled_security_headers %}
+    {% for header, value in (nginx_default_security_headers | ansible.builtin.combine(nginx_security_headers) | ansible.builtin.combine(_vhost.security_headers)).items() if header | lower not in _disabled_security_headers %}
 add_header {{ header }} "{{ value }}" always;
     {% endfor %}
 {% endmacro %}
@@ -16,19 +16,19 @@ add_header {{ header }} "{{ value }}" always;
 return {{ location.return }};
     {% endif %}
     {% if location.gzip_dynamic is defined %}
-gzip {{ location.gzip_dynamic | bool | ternary('on', 'off') }};
+gzip {{ location.gzip_dynamic | ansible.builtin.bool | ansible.builtin.ternary('on', 'off') }};
     {% endif %}
     {% if location.gzip_static is defined %}
-gzip_static {{ location.gzip_static | bool | ternary('on', 'off') }};
+gzip_static {{ location.gzip_static | ansible.builtin.bool | ansible.builtin.ternary('on', 'off') }};
     {% endif %}
     {% if location.access_log is defined %}
-        {% if location.access_log | bool %}
+        {% if location.access_log | ansible.builtin.bool %}
 access_log {{ location.access_log }}{% if nginx_log_format is defined %} main{% endif %};
         {% else %}
 access_log off;
         {% endif %}
     {% endif %}
-    {% if location.extra_options | default([]) | map('regex_search', '^\s*add_header\s') | select | list | count > 0 %}
+    {% if location.extra_options | default([]) | map('ansible.builtin.regex_search', '^\s*add_header\s') | select | list | count > 0 %}
         {{- security_headers() }}
     {% endif %}
     {% for opt in location.extra_options | default([]) %}
@@ -41,31 +41,31 @@ access_log off;
 server {
     listen {{ _vhost.ip | default('*') }}:{{ _vhost.unencrypted_port }};
     {% if _vhost.server_name is defined %}
-    server_name {{ [_vhost.server_name] | flatten | join(' ') }};
+    server_name {{ [_vhost.server_name] | ansible.builtin.flatten | join(' ') }};
     {% endif %}
-    return 301 https://$host{{ (_vhost.port | default(_vhost.use_tls | bool | ternary(443, 80)) == 443) | ternary('', ':' ~ _vhost.port | default(_vhost.use_tls | bool | ternary(443, 80))) }}$request_uri;
+    return 301 https://$host{{ (_vhost.port | default(_vhost.use_tls | ansible.builtin.bool | ansible.builtin.ternary(443, 80)) == 443) | ansible.builtin.ternary('', ':' ~ _vhost.port | default(_vhost.use_tls | ansible.builtin.bool | ansible.builtin.ternary(443, 80))) }}$request_uri;
 }
     {% endif %}
 {% endblock %}
 
 server {
     {% block server_basic %}
-    listen {{ _vhost.ip | default('*') }}:{{ _vhost.port | default(_vhost.use_tls | bool | ternary(443, 80)) }}{% if _vhost.use_tls | bool %} ssl http2{% endif %};
+    listen {{ _vhost.ip | default('*') }}:{{ _vhost.port | default(_vhost.use_tls | ansible.builtin.bool | ansible.builtin.ternary(443, 80)) }}{% if _vhost.use_tls | ansible.builtin.bool %} ssl http2{% endif %};
     {% if _vhost.server_name is defined %}
-    server_name {{ [_vhost.server_name] | flatten | join(' ') }};
+    server_name {{ [_vhost.server_name] | ansible.builtin.flatten | join(' ') }};
     {% endif %}
 
     {% if _vhost.root is defined %}
     root {{ _vhost.root }};
     {% endif %}
-    index {{ _vhost.index | default(_vhost.use_php | ternary('index.php ', '') ~ 'index.html index.htm') }};
+    index {{ _vhost.index | default(_vhost.use_php | ansible.builtin.ternary('index.php ', '') ~ 'index.html index.htm') }};
 
-    {% for error_page in [_vhost.error_page | default([])] | flatten %}
+    {% for error_page in [_vhost.error_page | default([])] | ansible.builtin.flatten %}
     error_page {{ error_page }};
     {% endfor %}
 
     {% if _vhost.access_log is defined %}
-    {% if _vhost.access_log | bool %}
+    {% if _vhost.access_log | ansible.builtin.bool %}
     access_log {{ _vhost.access_log }}{% if nginx_log_format is defined %} main{% endif %};
     {% else %}
     access_log off;
@@ -77,10 +77,10 @@ server {
     {% endblock %}
 
     {% block server_tls %}
-    {% if _vhost.use_tls | bool %}
+    {% if _vhost.use_tls | ansible.builtin.bool %}
     ssl_certificate {{ _vhost.tls_cert }};
     ssl_certificate_key {{ _vhost.tls_cert_key }};
-    {% if nginx_tls13_only | bool %}
+    {% if nginx_tls13_only | ansible.builtin.bool %}
     ssl_protocols TLSv1.3;
     {% else %}
     ssl_protocols TLSv1.2 TLSv1.3;
@@ -92,7 +92,7 @@ server {
     # Allow for session resumption.
     ssl_session_cache shared:TLS:1m;
     ssl_session_tickets on;
-    {% if nginx_ocsp_stapling | bool %}
+    {% if nginx_ocsp_stapling | ansible.builtin.bool %}
     # Enable OCSP stapling.
     ssl_stapling on;
     ssl_stapling_verify on;
@@ -122,12 +122,12 @@ server {
     }
 
     {% endfor %}
-    {% if _vhost.use_php | bool %}
+    {% if _vhost.use_php | ansible.builtin.bool %}
     {% for path in [nginx_php_status_path | default(false), nginx_php_ping_path | default(false)] %}
-    {% if path and path not in _vhost.locations | map('regex_replace', '^(=|~|~\*|\^~) *', '') | list %}
+    {% if path and path not in _vhost.locations | map('ansible.builtin.regex_replace', '^(=|~|~\*|\^~) *', '') | list %}
     location = {{ path }} {
         {% if nginx_php_monitor_ips is defined %}
-        {% for ip in [nginx_php_monitor_ips] | flatten %}
+        {% for ip in [nginx_php_monitor_ips] | ansible.builtin.flatten %}
         allow {{ ip }};
         {% endfor %}
         deny all;
@@ -135,7 +135,7 @@ server {
         access_log off;
         include fastcgi_params;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-        fastcgi_pass unix:{{ nginx_pidfile['php'] | dirname | quote }}/php-fpm.sock;
+        fastcgi_pass unix:{{ nginx_pidfile['php'] | ansible.builtin.dirname | ansible.builtin.quote }}/php-fpm.sock;
     }
 
     {% endif %}
@@ -171,13 +171,13 @@ server {
         fastcgi_param PATH_INFO $fastcgi_path_info;
         # Discard the request proxy header, if any (https://httpoxy.org/).
         fastcgi_param HTTP_PROXY "";
-        {% if _vhost.use_tls | bool %}
+        {% if _vhost.use_tls | ansible.builtin.bool %}
         fastcgi_param HTTPS on;
         {% endif %}
-        fastcgi_param PHP_VALUE "session.cookie_secure = {{ _vhost.use_tls | bool | ternary('On', 'Off') }}
+        fastcgi_param PHP_VALUE "session.cookie_secure = {{ _vhost.use_tls | ansible.builtin.bool | ansible.builtin.ternary('On', 'Off') }}
                                  session.cookie_domain = $host";
         fastcgi_read_timeout {{ nginx_php_timeout }};
-        fastcgi_pass unix:{{ nginx_pidfile['php'] | dirname | quote }}/php-fpm.sock;
+        fastcgi_pass unix:{{ nginx_pidfile['php'] | ansible.builtin.dirname | ansible.builtin.quote }}/php-fpm.sock;
         {% if _vhost.error_page is defined %}
         # Pass status codes above 300 to nginx for processing with the error_page directives above.
         fastcgi_intercept_errors on;
@@ -200,12 +200,12 @@ server {
     }
 
     {% block server_static_assets %}
-    {% if not _vhost.log_static_assets | bool or nginx_gzip_static | bool or _vhost.static_assets | count %}
+    {% if not _vhost.log_static_assets | ansible.builtin.bool or nginx_gzip_static | ansible.builtin.bool or _vhost.static_assets | count %}
     location ~ {{ _vhost.static_assets | default() }} {
-        {% if not _vhost.log_static_assets | bool %}
+        {% if not _vhost.log_static_assets | ansible.builtin.bool %}
         access_log off;
         {% endif %}
-        {% if nginx_gzip_static | bool %}
+        {% if nginx_gzip_static | ansible.builtin.bool %}
         location ~ \.(css|js|txt|html|htm|xhtml|xml|json|svg)$ {
             gzip_static on;
             {{ location_block({'extra_options': _vhost.static_extra_options}) | indent(12) }}

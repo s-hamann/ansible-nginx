@@ -1,6 +1,6 @@
 #jinja2: lstrip_blocks: True
 {# vim: filetype=nginx.jinja2 #}
-{{ ansible_managed | comment }}
+{{ ansible_managed | ansible.builtin.comment }}
 
 {% if ansible_facts['service_mgr'] != 'systemd' %}
 {# With systemd, the unit handles switching the user #}

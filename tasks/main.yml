@@ -3,47 +3,47 @@
   when: "nginx_php_version is not defined and ansible_facts['pkg_mgr'] == 'portage'"
   block:
     - name: 'Determine latest PHP version'
-      command: "equery --quiet --no-color list --portage-tree --overlay-tree --format='$mask$slot' dev-lang/php"
+      ansible.builtin.command: "equery --quiet --no-color list --portage-tree --overlay-tree --format='$mask$slot' dev-lang/php"
       register: _equery_php
       changed_when: false
       check_mode: false
 
     - name: 'Set PHP version to use'
-      set_fact:
-        nginx_php_version: "{{ _equery_php.stdout_lines | map('regex_search', '^ *[0-9]+\\.[0-9]+') | select | list | last | trim }}"
+      ansible.builtin.set_fact:
+        nginx_php_version: "{{ _equery_php.stdout_lines | map('ansible.builtin.regex_search', '^ *[0-9]+\\.[0-9]+') | select | list | last | trim }}"
 
 - name: 'Gather os specific variables'
-  include_vars: "{{ vars_file }}"
+  ansible.builtin.include_vars: "{{ vars_file }}"
   loop:
     - 'default.yml'
     - "{{ ansible_facts['os_family'] | lower }}.yml"
     - "{{ ansible_facts['distribution'] | lower }}.yml"
     - "{{ ansible_facts['distribution'] | lower }}-{{ ansible_facts['distribution_major_version'] }}.yml"
-    - "{{ ansible_facts['distribution'] | lower }}-{{ ansible_facts['distribution_version'] | regex_search('[0-9]+\\.[0-9]+') }}.yml"
+    - "{{ ansible_facts['distribution'] | lower }}-{{ ansible_facts['distribution_version'] | ansible.builtin.regex_search('[0-9]+\\.[0-9]+') }}.yml"
     - "{{ ansible_facts['distribution'] | lower }}-{{ ansible_facts['distribution_version'] }}.yml"
   loop_control:
     loop_var: vars_file
-  when: "(vars_file is abs and vars_file is file) or (vars_file is not abs and (role_path ~ '/vars/' ~ vars_file) is file)"
+  when: "(vars_file is ansible.builtin.abs and vars_file is ansible.builtin.file) or (vars_file is not ansible.builtin.abs and (role_path ~ '/vars/' ~ vars_file) is ansible.builtin.file)"
 
 - name: 'Check for optional feature support'
-  set_fact:
-    _use_tls: "{{ nginx_vhosts | selectattr('use_tls', 'defined') | map(attribute='use_tls') | list is any }}"
-    _use_php: "{{ nginx_vhosts | selectattr('use_php', 'defined') | map(attribute='use_php') | list is any }}"
+  ansible.builtin.set_fact:
+    _use_tls: "{{ nginx_vhosts | selectattr('use_tls', 'defined') | map(attribute='use_tls') | list is ansible.builtin.any }}"
+    _use_php: "{{ nginx_vhosts | selectattr('use_php', 'defined') | map(attribute='use_php') | list is ansible.builtin.any }}"
 
 - name: 'Resolve PHP extension dependencies'
-  set_fact:
-    nginx_php_extensions: "{{ nginx_php_extensions | select('in', nginx_php_extension_dependencies) | map('extract', nginx_php_extension_dependencies) | flatten | union(nginx_php_extensions) }}"
+  ansible.builtin.set_fact:
+    nginx_php_extensions: "{{ nginx_php_extensions | select('in', nginx_php_extension_dependencies) | map('ansible.builtin.extract', nginx_php_extension_dependencies) | ansible.builtin.flatten | ansible.builtin.union(nginx_php_extensions) }}"
 
 - name: 'Determine required packages'
-  set_fact:
-    _package_list: "{{ [nginx_packages['nginx']] | union(_use_php | ternary([nginx_packages['php']] | union((nginx_php_extensions + nginx_php_zend_extensions) | select('in', nginx_packages) | map('extract', nginx_packages) | flatten), [])) | union(nginx_extra_packages | default([])) }}"
+  ansible.builtin.set_fact:
+    _package_list: "{{ [nginx_packages['nginx']] | ansible.builtin.union(_use_php | ansible.builtin.ternary([nginx_packages['php']] | ansible.builtin.union((nginx_php_extensions + nginx_php_zend_extensions) | select('in', nginx_packages) | map('ansible.builtin.extract', nginx_packages) | ansible.builtin.flatten), [])) | ansible.builtin.union(nginx_extra_packages | default([])) }}"
 
 - name: 'Set required USE flags'
   when: "ansible_facts['pkg_mgr'] == 'portage'"
   block:
 
     - name: 'Determine USE flags for www-servers/nginx'
-      set_fact:
+      ansible.builtin.set_fact:
         _use_flags: "{{ _use_flags | default(['http'] + nginx_extra_use_flags['nginx'] | default([])) + item.flags }}"
       loop:
         - flags:
@@ -55,18 +55,18 @@
           when: "{{ _use_php }}"
         - flags:
             - 'nginx_modules_http_gzip'
-          when: "{{ nginx_gzip_dynamic | bool }}"
+          when: "{{ nginx_gzip_dynamic | ansible.builtin.bool }}"
         - flags:
             - 'nginx_modules_http_gzip_static'
-          when: "{{ nginx_gzip_static | bool }}"
+          when: "{{ nginx_gzip_static | ansible.builtin.bool }}"
       loop_control:
         label: "{{ item.flags }}"
-      when: "item.when | bool"
+      when: "item.when | ansible.builtin.bool"
 
     - name: 'Set USE flags for www-servers/nginx'
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: '/etc/portage/package.use/www'
-        line: "www-servers/nginx {{ _use_flags | sort | unique | join(' ') }}"
+        line: "www-servers/nginx {{ _use_flags | sort | ansible.builtin.unique | join(' ') }}"
         regexp: '^www-servers/nginx\s'
         create: true
         owner: root
@@ -75,7 +75,7 @@
         state: present
 
     - name: 'Set USE flags for app-eselect/eselect-php'
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: '/etc/portage/package.use/app'
         line: 'app-eselect/eselect-php fpm'
         create: true
@@ -86,10 +86,10 @@
       when: "_use_php"
 
     - name: "Set USE flags for {{ nginx_packages['php'] }}"
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: '/etc/portage/package.use/dev'
-        line: "{{ nginx_packages['php'] | replace(':' ~ nginx_php_version, '') }} {{ ['fpm'] | union((nginx_php_extensions + nginx_php_zend_extensions) | select('in', nginx_use_flags['php'] | default({})) | map('extract', nginx_use_flags['php'] | default({})) | flatten) | union(nginx_extra_use_flags['php'] | default([])) | sort | join(' ') }}"
-        regexp: "^{{ nginx_packages['php'] | replace(':' ~ nginx_php_version, '') | regex_escape }}\\s"
+        line: "{{ nginx_packages['php'] | replace(':' ~ nginx_php_version, '') }} {{ ['fpm'] | ansible.builtin.union((nginx_php_extensions + nginx_php_zend_extensions) | select('in', nginx_use_flags['php'] | default({})) | map('ansible.builtin.extract', nginx_use_flags['php'] | default({})) | ansible.builtin.flatten) | ansible.builtin.union(nginx_extra_use_flags['php'] | default([])) | sort | join(' ') }}"
+        regexp: "^{{ nginx_packages['php'] | replace(':' ~ nginx_php_version, '') | ansible.builtin.regex_escape }}\\s"
         create: true
         owner: root
         group: root
@@ -98,25 +98,25 @@
       when: "_use_php"
 
     - name: 'Set global PHP_TARGETS'
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: '/etc/portage/make.conf'
         line: "PHP_TARGETS='php{{ nginx_php_version | replace('.', '-') }}'"
         regexp: "^PHP_TARGETS="
         state: present
 
 - name: 'Install required packages'
-  package:
+  ansible.builtin.package:
     name: "{{ _package_list }}"
-    changed_use: "{{ (ansible_facts['pkg_mgr'] == 'portage') | ternary(true, omit) }}"
+    changed_use: "{{ (ansible_facts['pkg_mgr'] == 'portage') | ansible.builtin.ternary(true, omit) }}"
     state: present
 
 - name: 'Set active PHP version'
-  command: "eselect php set fpm php{{ nginx_php_version }}"
+  ansible.builtin.command: "eselect php set fpm php{{ nginx_php_version }}"
   notify: 'Restart php-fpm'
   when: "ansible_facts['pkg_mgr'] == 'portage'"
 
 - name: 'Check for PHP command-line interpreter'
-  command: 'which {{ nginx_php_cli | quote }}'
+  ansible.builtin.command: 'which {{ nginx_php_cli | ansible.builtin.quote }}'
   changed_when: false
   check_mode: false
   ignore_errors: true
@@ -124,33 +124,33 @@
   when: "_use_php"
 
 - name: 'Get built-in PHP extensions'
-  command: "{{ nginx_php_cli | quote }} -c /dev/null -r 'foreach (get_loaded_extensions() as $ext) echo $ext . PHP_EOL;'"
+  ansible.builtin.command: "{{ nginx_php_cli | ansible.builtin.quote }} -c /dev/null -r 'foreach (get_loaded_extensions() as $ext) echo $ext . PHP_EOL;'"
   environment:
     PHP_INI_SCAN_DIR:
   changed_when: false
   check_mode: false
   register: _php_built_in_extensions
-  when: "_use_php and _which_php is not failed"
+  when: "_use_php and _which_php is not ansible.builtin.failed"
 
 - name: 'Remove built-in PHP extensions from dynamically loaded list'
-  set_fact:
-    nginx_php_extensions: "{{ nginx_php_extensions | difference(_php_built_in_extensions.stdout_lines) }}"
-  when: "_use_php and _which_php is not failed"
+  ansible.builtin.set_fact:
+    nginx_php_extensions: "{{ nginx_php_extensions | ansible.builtin.difference(_php_built_in_extensions.stdout_lines) }}"
+  when: "_use_php and _which_php is not ansible.builtin.failed"
 
 - name: 'Determine log directories for nginx'
-  set_fact:
+  ansible.builtin.set_fact:
     _log_paths: "{{ (
                      [ nginx_access_log, nginx_error_log ] +
                      nginx_vhosts | map(attribute='error_log') | select('defined') | list +
                      nginx_vhosts | map(attribute='access_log') | select('defined') | list +
                      nginx_vhosts | map(attribute='locations') | map(attribute='access_log') | select('defined') | list
-                     ) | select | reject('in', ['off', 'Off', 'stderr']) | reject('match', 'syslog:') | map('dirname') | list }}"
+                     ) | select | reject('in', ['off', 'Off', 'stderr']) | reject('ansible.builtin.match', 'syslog:') | map('ansible.builtin.dirname') | list }}"
 
 - name: "Harden {{ nginx_service_name['nginx'] }}.service"
   when: "ansible_facts['service_mgr'] == 'systemd'"
   block:
     - name: "Create override directory for {{ nginx_service_name['nginx'] }}.service"
-      file:
+      ansible.builtin.file:
         path: "/etc/systemd/system/{{ nginx_service_name['nginx'] }}.service.d/"
         state: directory
         owner: root
@@ -158,7 +158,7 @@
         mode: 0755
 
     - name: "Install override file for {{ nginx_service_name['nginx'] }}.service"
-      template:
+      ansible.builtin.template:
         dest: "/etc/systemd/system/{{ nginx_service_name['nginx'] }}.service.d/override.conf"
         src: 'nginx_override.conf.j2'
         owner: root
@@ -172,7 +172,7 @@
       when: "_use_php"
       block:
         - name: "Create override directory for {{ nginx_service_name['php'] }}.service"
-          file:
+          ansible.builtin.file:
             path: "/etc/systemd/system/{{ nginx_service_name['php'] }}.service.d/"
             state: directory
             owner: root
@@ -180,7 +180,7 @@
             mode: 0755
 
         - name: "Install override file for {{ nginx_service_name['php'] }}.service"
-          template:
+          ansible.builtin.template:
             dest: "/etc/systemd/system/{{ nginx_service_name['php'] }}.service.d/override.conf"
             src: 'php-fpm_override.conf.j2'
             owner: root
@@ -192,12 +192,12 @@
 
     # If the unit files changed, reload them now.
     - name: 'Reload service files'
-      systemd:
+      ansible.builtin.systemd_service:
         daemon_reload: true
-      when: "_nginx_unit_override is changed or _php_unit_override is changed"
+      when: "_nginx_unit_override is ansible.builtin.changed or _php_unit_override is ansible.builtin.changed"
 
 - name: 'Prevent PHP from processing additional ini files (OpenRC)'
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: "/etc/conf.d/{{ nginx_service_name['php'] }}"
     line: 'export PHP_INI_SCAN_DIR='
     state: present
@@ -208,39 +208,39 @@
   when: "ansible_facts['service_mgr'] == 'openrc' and _use_php"
 
 - name: "Create {{ nginx_php_group }} system group"
-  group:
+  ansible.builtin.group:
     name: "{{ nginx_php_group }}"
     system: true
   when: "_use_php"
 
 - name: "Create {{ nginx_php_user }} system account"
-  user:
+  ansible.builtin.user:
     name: "{{ nginx_php_user }}"
     group: "{{ nginx_php_group }}"
     system: true
   when: "_use_php"
 
 - name: "Add {{ nginx_user }} to extra groups"
-  user:
+  ansible.builtin.user:
     name: "{{ nginx_user }}"
-    groups: "{{ [nginx_extra_groups] | flatten + _use_php | ternary([nginx_php_group], []) }}"
+    groups: "{{ [nginx_extra_groups] | ansible.builtin.flatten + _use_php | ansible.builtin.ternary([nginx_php_group], []) }}"
     append: true
   notify:
     - 'Restart nginx'
     - 'Restart php-fpm'
-  when: "[nginx_extra_groups | default([])] | flatten | count"
+  when: "[nginx_extra_groups | default([])] | ansible.builtin.flatten | count"
 
 - name: 'Install update_gzip_static.sh'
-  template:
+  ansible.builtin.template:
     dest: '/usr/local/sbin/update_gzip_static.sh'
     src: 'update_gzip_static.sh.j2'
     owner: root
     group: root
     mode: 0755
-  when: "nginx_gzip_static | bool"
+  when: "nginx_gzip_static | ansible.builtin.bool"
 
 - name: 'Install php-fpm.conf'
-  template:
+  ansible.builtin.template:
     dest: "{{ nginx_config_dir['php'] }}php-fpm.conf"
     src: 'php-fpm.conf.j2'
     owner: root
@@ -250,7 +250,7 @@
   when: "_use_php"
 
 - name: 'Install php.ini'
-  template:
+  ansible.builtin.template:
     dest: "{{ nginx_config_dir['php'] }}php.ini"
     src: 'php.ini.j2'
     owner: root
@@ -260,7 +260,7 @@
   when: "_use_php"
 
 - name: 'Create configuration directories'
-  file:
+  ansible.builtin.file:
     path: "{{ nginx_config_dir['nginx'] }}/{{ item }}"
     state: directory
     owner: root
@@ -273,17 +273,17 @@
     - 'modules-enabled'
 
 - name: 'Create log directories for nginx'
-  file:
+  ansible.builtin.file:
     path: "{{ item }}"
     state: directory
     owner: "{{ nginx_user }}"
     group: "{{ nginx_group }}"
     mode: 0755
-  loop: "{{ _log_paths | unique }}"
+  loop: "{{ _log_paths | ansible.builtin.unique }}"
 
 - name: 'Create log directory for PHP'
-  file:
-    path: "{{ nginx_php_error_log | dirname }}"
+  ansible.builtin.file:
+    path: "{{ nginx_php_error_log | ansible.builtin.dirname }}"
     state: directory
     owner: "{{ nginx_php_user }}"
     group: "{{ nginx_php_group }}"
@@ -291,14 +291,14 @@
   when: "_use_php and nginx_php_error_log | default(false) and nginx_php_error_log != 'syslog'"
 
 - name: 'Create Diffie-Hellman parameters'
-  command: "openssl dhparam -out '{{ nginx_config_dir['nginx'] }}dhparams.pem' 2048"
+  ansible.builtin.command: "openssl dhparam -out '{{ nginx_config_dir['nginx'] }}dhparams.pem' 2048"
   args:
     creates: "{{ nginx_config_dir['nginx'] }}dhparams.pem"
   when: "_use_tls"
   notify: 'Reload nginx'
 
 - name: 'Install nginx.conf'
-  template:
+  ansible.builtin.template:
     dest: "{{ nginx_config_dir['nginx'] }}nginx.conf"
     src: "{{ nginx_config_template | default('nginx.conf.j2') }}"
     owner: root
@@ -306,39 +306,39 @@
     mode: 0644
   notify: 'Reload nginx'
 
-- include_tasks: vhost.yml
+- ansible.builtin.include_tasks: vhost.yml
   loop: "{{ nginx_vhosts }}"
   loop_control:
     loop_var: vhost
     label: "{{ vhost.server_name | default('<empty host header>') }}"
 
 - name: 'Find enabled sites'
-  find:
+  ansible.builtin.find:
     path: "{{ nginx_config_dir['nginx'] }}sites-enabled/"
     file_type: link
     recurse: false
   register: _sites_enabled
 
 - name: 'Disable unmanaged sites'
-  file:
-    path: "{{ nginx_config_dir['nginx'] }}sites-enabled/{{ file | basename }}"
+  ansible.builtin.file:
+    path: "{{ nginx_config_dir['nginx'] }}sites-enabled/{{ file | ansible.builtin.basename }}"
     state: absent
   loop: "{{ _sites_enabled.files | map(attribute='path') | default([]) | list }}"
   loop_control:
     loop_var: file
-    label: "{{ file | basename }}"
-  when: "file | basename not in nginx_vhosts | map(attribute='filename')"
+    label: "{{ file | ansible.builtin.basename }}"
+  when: "file | ansible.builtin.basename not in nginx_vhosts | map(attribute='filename')"
   notify: 'Reload nginx'
 
 - name: 'Enable and start php-fpm'
-  service:
+  ansible.builtin.service:
     name: "{{ nginx_service_name['php'] }}"
     enabled: true
-    state: "{{ ansible_facts['is_chroot'] | ternary(omit, 'started') }}"
+    state: "{{ ansible_facts['is_chroot'] | ansible.builtin.ternary(omit, 'started') }}"
   when: "_use_php"
 
 - name: 'Enable and start nginx'
-  service:
+  ansible.builtin.service:
     name: "{{ nginx_service_name['nginx'] }}"
     enabled: true
-    state: "{{ ansible_facts['is_chroot'] | ternary(omit, 'started') }}"
+    state: "{{ ansible_facts['is_chroot'] | ansible.builtin.ternary(omit, 'started') }}"

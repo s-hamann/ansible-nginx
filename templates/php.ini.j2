@@ -1,9 +1,9 @@
 {# vim: filetype=dosini #}
-{{ ansible_managed | comment(decoration='; ') }}
+{{ ansible_managed | ansible.builtin.comment(decoration='; ') }}
 [PHP]
 
 ; Disable certain functions for security reasons.
-disable_functions = {{ nginx_php_disabled_functions | difference(nginx_php_enabled_functions) | sort | join(',') }}
+disable_functions = {{ nginx_php_disabled_functions | ansible.builtin.difference(nginx_php_enabled_functions) | sort | join(',') }}
 
 {% for k, v in (nginx_php_default_options['PHP'] | combine(nginx_php_extra_options['PHP'] | default({}))).items() %}
 {{ k }} = {{ v }}

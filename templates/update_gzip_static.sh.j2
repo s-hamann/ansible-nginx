@@ -1,6 +1,6 @@
 #!/bin/sh
 {# vim: filetype=sh.jinja2 #}
-{{ ansible_managed | comment }}
+{{ ansible_managed | ansible.builtin.comment }}
 
 # This script updates precompressed static file served by nginx.
 
@@ -31,7 +31,7 @@ compress() {
 }
 
 # remove old compressed files that are not needed anymore
-find {{ nginx_vhosts | selectattr('root', 'defined') | map(attribute='root') | map('quote') | join(' ') }} -type f -name "*.gz" | while read -r zipfile; do
+find {{ nginx_vhosts | selectattr('root', 'defined') | map(attribute='root') | map('ansible.builtin.quote') | join(' ') }} -type f -name "*.gz" | while read -r zipfile; do
     plainfile="${zipfile%.gz}"
     if [ ! -e "${plainfile}" ]; then
         echo "Removing stale ${zipfile}"
@@ -40,7 +40,7 @@ find {{ nginx_vhosts | selectattr('root', 'defined') | map(attribute='root') | m
 done
 
 # create new compressed files
-find {{ nginx_vhosts | selectattr('root', 'defined') | map(attribute='root') | map('quote') | join(' ') }} -type f -regex "${filetypes}" -size +${min_length}c | while read -r plainfile; do
+find {{ nginx_vhosts | selectattr('root', 'defined') | map(attribute='root') | map('ansible.builtin.quote') | join(' ') }} -type f -regex "${filetypes}" -size +${min_length}c | while read -r plainfile; do
     zipfile="${plainfile}.gz"
     if [ -e "${zipfile}" ]; then
         if [ "$(stat -c '%Y' -- "${plainfile}")" -gt "$(stat -c '%Y' -- "${zipfile}")" ]; then

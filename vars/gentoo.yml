@@ -94,5 +94,5 @@ nginx_config_dir:
   nginx: '/etc/nginx/'
   php: "/etc/php/fpm-php{{ nginx_php_version }}/"
 nginx_pidfile:
-  nginx: "{{ (ansible_facts['service_mgr'] == 'openrc') | ternary('/run/nginx.pid', '/run/nginx/nginx.pid') }}"
-  php:  "{{ (ansible_facts['service_mgr'] == 'openrc') | ternary('/run/php-fpm-php' ~ nginx_php_version ~ '.pid', '/run/php-fpm/php-fpm.pid') }}"
+  nginx: "{{ (ansible_facts['service_mgr'] == 'openrc') | ansible.builtin.ternary('/run/nginx.pid', '/run/nginx/nginx.pid') }}"
+  php:  "{{ (ansible_facts['service_mgr'] == 'openrc') | ansible.builtin.ternary('/run/php-fpm-php' ~ nginx_php_version ~ '.pid', '/run/php-fpm/php-fpm.pid') }}"

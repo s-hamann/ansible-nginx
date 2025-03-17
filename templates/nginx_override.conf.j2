@@ -1,10 +1,10 @@
 {# vim: filetype=systemd.jinja2 #}
-{{ ansible_managed | comment }}
+{{ ansible_managed | ansible.builtin.comment }}
 [Service]
 User={{ nginx_user }}
 Group={{ nginx_group }}
-PIDFile={{ nginx_pidfile['nginx'] | quote }}
-RuntimeDirectory={{ nginx_pidfile['nginx'] | dirname | relpath('/run') | quote }}
+PIDFile={{ nginx_pidfile['nginx'] | ansible.builtin.quote }}
+RuntimeDirectory={{ nginx_pidfile['nginx'] | ansible.builtin.dirname | ansible.builtin.relpath('/run') | ansible.builtin.quote }}
 # Apply principle of least privilege
 NoNewPrivileges=true
 CapabilityBoundingSet=
@@ -15,17 +15,17 @@ AmbientCapabilities=CAP_NET_BIND_SERVICE
 {% endif %}
 ProtectSystem=strict
 ProtectHome=true
-{% for path in (_log_paths + nginx_writable_paths) | unique %}
-ReadWritePaths=-{{ path | quote }}
+{% for path in (_log_paths + nginx_writable_paths) | ansible.builtin.unique %}
+ReadWritePaths=-{{ path | ansible.builtin.quote }}
 {% endfor %}
 {% if nginx_inaccessible_paths | count %}
-{% for path in [nginx_inaccessible_paths] | flatten | unique %}
-InaccessiblePaths=-{{ path | quote }}
+{% for path in [nginx_inaccessible_paths] | ansible.builtin.flatten | ansible.builtin.unique %}
+InaccessiblePaths=-{{ path | ansible.builtin.quote }}
 {% endfor %}
 {% endif %}
 PrivateTmp=true
 PrivateDevices=true
-{% if [nginx_extra_groups | default([])] | flatten | count == 0 %}
+{% if [nginx_extra_groups | default([])] | ansible.builtin.flatten | count == 0 %}
 PrivateUsers=true
 {% endif %}
 ProtectKernelTunables=true

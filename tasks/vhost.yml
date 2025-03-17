@@ -1,10 +1,10 @@
 ---
 - name: 'Set undefined values to their defaults'
-  set_fact:
-    _vhost: "{{ nginx_vhost_defaults | combine(vhost) }}"
+  ansible.builtin.set_fact:
+    _vhost: "{{ nginx_vhost_defaults | ansible.builtin.combine(vhost) }}"
 
 - name: 'Install per-vhost configuration files'
-  template:
+  ansible.builtin.template:
     dest: "{{ nginx_config_dir['nginx'] }}sites-available/{{ _vhost.filename }}"
     src: "{{ _vhost.template | default('vhost.conf.j2') }}"
     owner: root
@@ -13,7 +13,7 @@
   notify: 'Reload nginx'
 
 - name: 'Enable per-vhost configuration files'
-  file:
+  ansible.builtin.file:
     state: link
     src: "{{ nginx_config_dir['nginx'] }}sites-available/{{ _vhost.filename }}"
     dest: "{{ nginx_config_dir['nginx'] }}sites-enabled/{{ _vhost.filename }}"
