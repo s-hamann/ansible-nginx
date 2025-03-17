@@ -305,7 +305,8 @@
     mode: '0644'
   notify: 'Reload nginx'
 
-- ansible.builtin.include_tasks: vhost.yml
+- name: 'Set up vhosts'
+  ansible.builtin.include_tasks: vhost.yml
   loop: "{{ nginx_vhosts }}"
   loop_control:
     loop_var: vhost
