@@ -126,7 +126,7 @@
 - name: 'Get built-in PHP extensions'
   ansible.builtin.command: "{{ nginx_php_cli | ansible.builtin.quote }} -c /dev/null -r 'foreach (get_loaded_extensions() as $ext) echo $ext . PHP_EOL;'"
   environment:
-    PHP_INI_SCAN_DIR:
+    PHP_INI_SCAN_DIR: ''
   changed_when: false
   check_mode: false
   register: _php_built_in_extensions
