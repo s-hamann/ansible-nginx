@@ -1,6 +1,6 @@
 ---
 nginx_packages:
-  nginx: 'nginx'
+  nginx: nginx
   php: "dev-lang/php:{{ nginx_php_version }}"
   amqp: 'dev-php/pecl-amqp'
   apcu: 'dev-php/pecl-apcu'
@@ -31,68 +31,99 @@ nginx_packages:
   zmq: 'dev-php/pecl-zmq'
 nginx_use_flags:
   php:
-    bcmath: 'bcmath'
-    bz2: 'bzip2'
-    calendar: 'calendar'
-    ctype: 'ctype'
-    curl: 'curl'
-    dom: 'xml'
-    enchant: 'enchant'
-    exif: ['exif', 'gd', 'zlib']
-    fileinfo: 'fileinfo'
-    filter: 'filter'
-    ftp: 'ftp'
-    gd: ['gd', 'zlib']
-    gettext: 'nls'
-    gmp: 'gmp'
-    iconv: 'iconv'
-    imap: 'imap'
-    interbase: 'firebird'
-    intl: 'intl'
-    json: 'json'
-    ldap: 'ldap'
-    mbstring: 'unicode'
-    mhash: ['mhash', 'hash']
-    mysqli: 'mysqli'
-    odbc: 'odbc'
-    opcache: 'opcache'
-    openssl: 'ssl'
-    pcntl: 'pcntl'
-    pdo: 'pdo'
-    pdo_dblib: ['mssql', 'pdo']
-    pdo_firebird: ['firebird', 'pdo']
-    pdo_mysql: ['mysql', 'pdo']
-    pdo_odbc: ['odbc', 'pdo']
-    pdo_pgsql: ['postgres', 'pdo']
-    pdo_sqlite: ['sqlite', 'pdo']
-    pgsql: 'postgres'
-    phar: 'phar'
-    posix: 'posix'
-    pspell: 'spell'
-    recode: 'recode'
-    session: 'session'
-    shmop: 'sharedmem'
-    simplexml: ['simplexml', 'xml']
-    snmp: 'snmp'
-    soap: ['soap', 'xml']
-    sockets: 'sockets'
-    sodium: 'sodium'
-    sqlite3: 'sqlite'
-    sysvmsg: 'sysvipc'
-    sysvsem: 'sysvipc'
-    sysvshm: 'sysvipc'
-    tidy: 'tidy'
-    tokenizer: 'tokenizer'
-    wddx: ['wddx', 'xml']
-    xml: 'xml'
-    xmlreader: ['xmlreader', 'xml']
-    xmlrpc: ['xmlrpc', 'xml']
-    xmlwriter: 'xmlwriter'
-    xsl: ['xslt', 'xml']
-    zip: 'zip'
+    bcmath: bcmath
+    bz2: bzip2
+    calendar: calendar
+    ctype: ctype
+    curl: curl
+    dom: xml
+    enchant: enchant
+    exif:
+      - exif
+      - gd
+      - zlib
+    fileinfo: fileinfo
+    filter: filter
+    ftp: ftp
+    gd:
+      - gd
+      - zlib
+    gettext: nls
+    gmp: gmp
+    iconv: iconv
+    imap: imap
+    interbase: firebird
+    intl: intl
+    json: json
+    ldap: ldap
+    mbstring: unicode
+    mhash:
+      - mhash
+      - hash
+    mysqli: mysqli
+    odbc: odbc
+    opcache: opcache
+    openssl: ssl
+    pcntl: pcntl
+    pdo: pdo
+    pdo_dblib:
+      - mssql
+      - pdo
+    pdo_firebird:
+      - firebird
+      - pdo
+    pdo_mysql:
+      - mysql
+      - pdo
+    pdo_odbc:
+      - odbc
+      - pdo
+    pdo_pgsql:
+      - postgres
+      - pdo
+    pdo_sqlite:
+      - sqlite
+      - pdo
+    pgsql: postgres
+    phar: phar
+    posix: posix
+    pspell: spell
+    recode: recode
+    session: session
+    shmop: sharedmem
+    simplexml:
+      - simplexml
+      - xml
+    snmp: snmp
+    soap:
+      - soap
+      - xml
+    sockets: sockets
+    sodium: sodium
+    sqlite3: sqlite
+    sysvmsg: sysvipc
+    sysvsem: sysvipc
+    sysvshm: sysvipc
+    tidy: tidy
+    tokenizer: tokenizer
+    wddx:
+      - wddx
+      - xml
+    xml: xml
+    xmlreader:
+      - xmlreader
+      - xml
+    xmlrpc:
+      - xmlrpc
+      - xml
+    xmlwriter: xmlwriter
+    xsl:
+      - xslt
+      - xml
+    zip: zip
 nginx_config_dir:
   nginx: '/etc/nginx/'
   php: "/etc/php/fpm-php{{ nginx_php_version }}/"
 nginx_pidfile:
   nginx: "{{ (ansible_facts['service_mgr'] == 'openrc') | ansible.builtin.ternary('/run/nginx.pid', '/run/nginx/nginx.pid') }}"
-  php:  "{{ (ansible_facts['service_mgr'] == 'openrc') | ansible.builtin.ternary('/run/php-fpm-php' ~ nginx_php_version ~ '.pid', '/run/php-fpm/php-fpm.pid') }}"
+  php: "{{ (ansible_facts['service_mgr'] == 'openrc') | ansible.builtin.ternary('/run/php-fpm-php' ~ nginx_php_version ~ '.pid', '/run/php-fpm/php-fpm.pid') }}"

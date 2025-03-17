@@ -13,15 +13,15 @@
   ansible.builtin.service:
     name: "{{ nginx_service_name['php'] }}"
     state: "{{ ansible_facts['is_chroot'] | ansible.builtin.ternary(omit, 'restarted') }}"
-  when: "_use_php"
+  when: _use_php
 
 - name: 'Reload php-fpm'
   ansible.builtin.service:
     name: "{{ nginx_service_name['php'] }}"
     state: "{{ ansible_facts['is_chroot'] | ansible.builtin.ternary(omit, 'reloaded') }}"
-  when: "_use_php"
+  when: _use_php
 
 - name: 'Update nginx compressed static files'
   ansible.builtin.command: '/usr/local/sbin/update_gzip_static.sh'
-  listen: 'nginx_update_gzip_static'
+  listen: nginx_update_gzip_static
   when: "nginx_gzip_static | ansible.builtin.bool"

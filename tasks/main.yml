@@ -15,7 +15,7 @@
 - name: 'Gather os specific variables'
   ansible.builtin.include_vars: "{{ vars_file }}"
   loop:
-    - 'default.yml'
+    - default.yml
     - "{{ ansible_facts['os_family'] | lower }}.yml"
     - "{{ ansible_facts['distribution'] | lower }}.yml"
     - "{{ ansible_facts['distribution'] | lower }}-{{ ansible_facts['distribution_major_version'] }}.yml"
@@ -47,17 +47,17 @@
         _use_flags: "{{ _use_flags | default(['http'] + nginx_extra_use_flags['nginx'] | default([])) + item.flags }}"
       loop:
         - flags:
-            - 'http2'
-            - 'ssl'
+            - http2
+            - ssl
           when: "{{ _use_tls }}"
         - flags:
-            - 'nginx_modules_http_fastcgi'
+            - nginx_modules_http_fastcgi
           when: "{{ _use_php }}"
         - flags:
-            - 'nginx_modules_http_gzip'
+            - nginx_modules_http_gzip
           when: "{{ nginx_gzip_dynamic | ansible.builtin.bool }}"
         - flags:
-            - 'nginx_modules_http_gzip_static'
+            - nginx_modules_http_gzip_static
           when: "{{ nginx_gzip_static | ansible.builtin.bool }}"
       loop_control:
         label: "{{ item.flags }}"
@@ -71,7 +71,7 @@
         create: true
         owner: root
         group: root
-        mode: 0644
+        mode: '0644'
         state: present
 
     - name: 'Set USE flags for app-eselect/eselect-php'
@@ -81,9 +81,9 @@
         create: true
         owner: root
         group: root
-        mode: 0644
+        mode: '0644'
         state: present
-      when: "_use_php"
+      when: _use_php
 
     - name: "Set USE flags for {{ nginx_packages['php'] }}"
       ansible.builtin.lineinfile:
@@ -93,9 +93,9 @@
         create: true
         owner: root
         group: root
-        mode: 0644
+        mode: '0644'
         state: present
-      when: "_use_php"
+      when: _use_php
 
     - name: 'Set global PHP_TARGETS'
       ansible.builtin.lineinfile:
@@ -121,7 +121,7 @@
   check_mode: false
   ignore_errors: true
   register: _which_php
-  when: "_use_php"
+  when: _use_php
 
 - name: 'Get built-in PHP extensions'
   ansible.builtin.command: "{{ nginx_php_cli | ansible.builtin.quote }} -c /dev/null -r 'foreach (get_loaded_extensions() as $ext) echo $ext . PHP_EOL;'"
@@ -139,12 +139,11 @@
 
 - name: 'Determine log directories for nginx'
   ansible.builtin.set_fact:
-    _log_paths: "{{ (
-                     [ nginx_access_log, nginx_error_log ] +
+    _log_paths: "{{ ([nginx_access_log, nginx_error_log] +
                      nginx_vhosts | map(attribute='error_log') | select('defined') | list +
                      nginx_vhosts | map(attribute='access_log') | select('defined') | list +
-                     nginx_vhosts | map(attribute='locations') | map(attribute='access_log') | select('defined') | list
-                     ) | select | reject('in', ['off', 'Off', 'stderr']) | reject('ansible.builtin.match', 'syslog:') | map('ansible.builtin.dirname') | list }}"
+                     nginx_vhosts | map(attribute='locations') | map(attribute='access_log') | select('defined') | list)
+                     | select | reject('in', ['off', 'Off', 'stderr']) | reject('ansible.builtin.match', 'syslog:') | map('ansible.builtin.dirname') | list }}"
 
 - name: "Harden {{ nginx_service_name['nginx'] }}.service"
   when: "ansible_facts['service_mgr'] == 'systemd'"
@@ -155,21 +154,21 @@
         state: directory
         owner: root
         group: root
-        mode: 0755
+        mode: '0755'
 
     - name: "Install override file for {{ nginx_service_name['nginx'] }}.service"
       ansible.builtin.template:
         dest: "/etc/systemd/system/{{ nginx_service_name['nginx'] }}.service.d/override.conf"
-        src: 'nginx_override.conf.j2'
+        src: nginx_override.conf.j2
         owner: root
         group: root
-        mode: 0644
+        mode: '0644'
       notify:
         - 'Restart nginx'
       register: _nginx_unit_override
 
     - name: "Harden {{ nginx_service_name['php'] }}.service"
-      when: "_use_php"
+      when: _use_php
       block:
         - name: "Create override directory for {{ nginx_service_name['php'] }}.service"
           ansible.builtin.file:
@@ -177,15 +176,15 @@
             state: directory
             owner: root
             group: root
-            mode: 0755
+            mode: '0755'
 
         - name: "Install override file for {{ nginx_service_name['php'] }}.service"
           ansible.builtin.template:
             dest: "/etc/systemd/system/{{ nginx_service_name['php'] }}.service.d/override.conf"
-            src: 'php-fpm_override.conf.j2'
+            src: php-fpm_override.conf.j2
             owner: root
             group: root
-            mode: 0644
+            mode: '0644'
           notify:
             - 'Restart php-fpm'
           register: _php_unit_override
@@ -204,21 +203,21 @@
     create: true
     owner: root
     group: root
-    mode: 0644
+    mode: '0644'
   when: "ansible_facts['service_mgr'] == 'openrc' and _use_php"
 
 - name: "Create {{ nginx_php_group }} system group"
   ansible.builtin.group:
     name: "{{ nginx_php_group }}"
     system: true
-  when: "_use_php"
+  when: _use_php
 
 - name: "Create {{ nginx_php_user }} system account"
   ansible.builtin.user:
     name: "{{ nginx_php_user }}"
     group: "{{ nginx_php_group }}"
     system: true
-  when: "_use_php"
+  when: _use_php
 
 - name: "Add {{ nginx_user }} to extra groups"
   ansible.builtin.user:
@@ -233,31 +232,31 @@
 - name: 'Install update_gzip_static.sh'
   ansible.builtin.template:
     dest: '/usr/local/sbin/update_gzip_static.sh'
-    src: 'update_gzip_static.sh.j2'
+    src: update_gzip_static.sh.j2
     owner: root
     group: root
-    mode: 0755
+    mode: '0755'
   when: "nginx_gzip_static | ansible.builtin.bool"
 
 - name: 'Install php-fpm.conf'
   ansible.builtin.template:
     dest: "{{ nginx_config_dir['php'] }}php-fpm.conf"
-    src: 'php-fpm.conf.j2'
+    src: php-fpm.conf.j2
     owner: root
     group: root
-    mode: 0644
+    mode: '0644'
   notify: 'Reload php-fpm'
-  when: "_use_php"
+  when: _use_php
 
 - name: 'Install php.ini'
   ansible.builtin.template:
     dest: "{{ nginx_config_dir['php'] }}php.ini"
-    src: 'php.ini.j2'
+    src: php.ini.j2
     owner: root
     group: root
-    mode: 0644
+    mode: '0644'
   notify: 'Reload php-fpm'
-  when: "_use_php"
+  when: _use_php
 
 - name: 'Create configuration directories'
   ansible.builtin.file:
@@ -265,12 +264,12 @@
     state: directory
     owner: root
     group: root
-    mode: 0755
+    mode: '0755'
   loop:
-    - 'sites-available'
-    - 'sites-enabled'
-    - 'modules-available'
-    - 'modules-enabled'
+    - sites-available
+    - sites-enabled
+    - modules-available
+    - modules-enabled
 
 - name: 'Create log directories for nginx'
   ansible.builtin.file:
@@ -278,7 +277,7 @@
     state: directory
     owner: "{{ nginx_user }}"
     group: "{{ nginx_group }}"
-    mode: 0755
+    mode: '0755'
   loop: "{{ _log_paths | ansible.builtin.unique }}"
 
 - name: 'Create log directory for PHP'
@@ -287,14 +286,14 @@
     state: directory
     owner: "{{ nginx_php_user }}"
     group: "{{ nginx_php_group }}"
-    mode: 0755
+    mode: '0755'
   when: "_use_php and nginx_php_error_log | default(false) and nginx_php_error_log != 'syslog'"
 
 - name: 'Create Diffie-Hellman parameters'
   ansible.builtin.command: "openssl dhparam -out '{{ nginx_config_dir['nginx'] }}dhparams.pem' 2048"
   args:
     creates: "{{ nginx_config_dir['nginx'] }}dhparams.pem"
-  when: "_use_tls"
+  when: _use_tls
   notify: 'Reload nginx'
 
 - name: 'Install nginx.conf'
@@ -303,7 +302,7 @@
     src: "{{ nginx_config_template | default('nginx.conf.j2') }}"
     owner: root
     group: root
-    mode: 0644
+    mode: '0644'
   notify: 'Reload nginx'
 
 - ansible.builtin.include_tasks: vhost.yml
@@ -335,7 +334,7 @@
     name: "{{ nginx_service_name['php'] }}"
     enabled: true
     state: "{{ ansible_facts['is_chroot'] | ansible.builtin.ternary(omit, 'started') }}"
-  when: "_use_php"
+  when: _use_php
 
 - name: 'Enable and start nginx'
   ansible.builtin.service:

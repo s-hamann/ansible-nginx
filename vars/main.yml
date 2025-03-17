@@ -1,10 +1,10 @@
 ---
 nginx_default_security_headers:
   Content-Security-Policy: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; block-all-mixed-content; upgrade-insecure-requests;"
-  Referrer-Policy: 'same-origin'
+  Referrer-Policy: same-origin
   Strict-Transport-Security: 'max-age=31536000;'
-  X-Content-Type-Options: 'nosniff'
-  X-Frame-Options: 'SAMEORIGIN'
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
 nginx_vhost_defaults:
   - use_tls: false
     use_php: false
@@ -70,11 +70,11 @@ nginx_php_default_options:
     output_buffering: '4096'
     post_max_size: "{{ nginx_max_body_size }}M"
     register_argc_argv: 'Off'
-    request_order: 'GP'
+    request_order: GP
     short_open_tag: 'Off'
     upload_max_filesize: "{{ nginx_max_body_size }}M"
     user_ini.filename: ''
-    variables_order: 'GPCS'
+    variables_order: GPCS
   Date:
     date.timezone: "{{ nginx_php_timezone }}"
   Session:
@@ -88,7 +88,7 @@ nginx_php_default_options:
     session.use_cookies: 'On'
     session.use_only_cookies: 'On'
     session.cookie_httponly: 'On'
-    session.cookie_samesite: 'Strict'
+    session.cookie_samesite: Strict
   mail function:
     mail.add_x_header: 'Off'
   Assertion:

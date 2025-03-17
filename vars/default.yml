@@ -1,16 +1,16 @@
 ---
 nginx_packages:
-  nginx: 'nginx'
-  php: 'php-fpm'
+  nginx: nginx
+  php: php-fpm
 nginx_service_name:
-  nginx: 'nginx'
-  php: 'php-fpm'
-nginx_user: 'nginx'
-nginx_group: 'nginx'
+  nginx: nginx
+  php: php-fpm
+nginx_user: nginx
+nginx_group: nginx
 nginx_config_dir:
   nginx: '/etc/nginx/'
   php: '/etc/php/'
 nginx_pidfile:
   nginx: '/run/nginx/nginx.pid'
   php: '/run/php-fpm/php-fpm.pid'
-nginx_php_cli: 'php'
+nginx_php_cli: php

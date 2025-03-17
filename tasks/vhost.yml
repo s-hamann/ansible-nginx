@@ -9,7 +9,7 @@
     src: "{{ _vhost.template | default('vhost.conf.j2') }}"
     owner: root
     group: root
-    mode: 0644
+    mode: '0644'
   notify: 'Reload nginx'
 
 - name: 'Enable per-vhost configuration files'
