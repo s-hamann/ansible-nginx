@@ -94,9 +94,6 @@ Role Variables
   The global log file for errors.
   This can be overwritten per vhost.
   If not set, logs go to the systemd journal or syslog, as appropriate.
-* `nginx_ocsp_stapling`  
-  Enable or disable OCSP Stapling for all TLS-enabled vhosts.
-  Defaults to `true`.
 * `nginx_security_headers`  
   This role sets up a number of security relevant HTTP headers.
   `nginx_security_headers` is a dictionary that allows tuning their values from the defaults or adding new headers.
