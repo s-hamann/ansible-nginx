@@ -36,7 +36,11 @@
 
 - name: 'Determine required packages'
   ansible.builtin.set_fact:
-    _package_list: "{{ [nginx_packages['nginx']] | ansible.builtin.union(_use_php | ansible.builtin.ternary([nginx_packages['php']] | ansible.builtin.union((nginx_php_extensions + nginx_php_zend_extensions) | select('in', nginx_packages) | map('ansible.builtin.extract', nginx_packages) | ansible.builtin.flatten), [])) | ansible.builtin.union(nginx_extra_packages | default([])) }}"
+    _package_list: "{{
+      [nginx_packages['nginx']]
+      | ansible.builtin.union(_use_php | ansible.builtin.ternary([nginx_packages['php']] | ansible.builtin.union((nginx_php_extensions + nginx_php_zend_extensions) | select('in', nginx_packages) | map('ansible.builtin.extract', nginx_packages) | ansible.builtin.flatten), []))
+      | ansible.builtin.union(nginx_extra_packages | default([]))
+    }}"
 
 - name: 'Set required USE flags'
   when: "ansible_facts['pkg_mgr'] == 'portage'"
