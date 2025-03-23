@@ -215,7 +215,7 @@ Role Variables
         Sets the access log for this location.
         If not set, the vhost's access log file is used.
       * `extra_options`  
-        A list of additional configuration optional options for this location.
+        A list of additional configuration options for this location.
 
 The following options are specific to PHP and are only used if at least one vhost has `use_php` set.
 * `nginx_php_process_manager`  
