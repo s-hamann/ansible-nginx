@@ -10,7 +10,7 @@
 
     - name: 'Set PHP version to use'
       ansible.builtin.set_fact:
-        nginx_php_version: "{{ _equery_php.stdout_lines | map('ansible.builtin.regex_search', '^ *[0-9]+\\.[0-9]+') | select | list | last | trim }}"
+        nginx_php_version: "{{ _equery_php.stdout_lines | map('ansible.builtin.regex_search', '^ *[0-9]+\\.[0-9]+') | select | last | trim }}"
 
 - name: 'Gather os specific variables'
   ansible.builtin.include_vars: "{{ vars_file }}"
@@ -27,8 +27,8 @@
 
 - name: 'Check for optional feature support'
   ansible.builtin.set_fact:
-    _use_tls: "{{ nginx_vhosts | selectattr('use_tls', 'defined') | map(attribute='use_tls') | list is ansible.builtin.any }}"
-    _use_php: "{{ nginx_vhosts | selectattr('use_php', 'defined') | map(attribute='use_php') | list is ansible.builtin.any }}"
+    _use_tls: "{{ nginx_vhosts | selectattr('use_tls', 'defined') | map(attribute='use_tls') is ansible.builtin.any }}"
+    _use_php: "{{ nginx_vhosts | selectattr('use_php', 'defined') | map(attribute='use_php') is ansible.builtin.any }}"
 
 - name: 'Resolve PHP extension dependencies'
   ansible.builtin.set_fact:
@@ -145,10 +145,10 @@
 - name: 'Determine log directories for nginx'
   ansible.builtin.set_fact:
     _log_paths: "{{ ([nginx_access_log, nginx_error_log] +
-                     nginx_vhosts | map(attribute='error_log') | select('defined') | list +
-                     nginx_vhosts | map(attribute='access_log') | select('defined') | list +
-                     nginx_vhosts | map(attribute='locations') | map(attribute='access_log') | select('defined') | list)
-                     | select | reject('in', ['off', 'Off', 'stderr']) | reject('ansible.builtin.match', 'syslog:') | map('ansible.builtin.dirname') | list }}"
+                     nginx_vhosts | map(attribute='error_log') | select('defined') +
+                     nginx_vhosts | map(attribute='access_log') | select('defined') +
+                     nginx_vhosts | map(attribute='locations') | map(attribute='access_log') | select('defined'))
+                     | select | reject('in', ['off', 'Off', 'stderr']) | reject('ansible.builtin.match', 'syslog:') | map('ansible.builtin.dirname') }}"
 
 - name: "Harden {{ nginx_service_name['nginx'] }}.service"
   when: "ansible_facts['service_mgr'] == 'systemd'"
@@ -328,7 +328,7 @@
   ansible.builtin.file:
     path: "{{ nginx_config_dir['nginx'] }}sites-enabled/{{ file | ansible.builtin.basename }}"
     state: absent
-  loop: "{{ _sites_enabled.files | map(attribute='path') | default([]) | list }}"
+  loop: "{{ _sites_enabled.files | map(attribute='path') | default([]) }}"
   loop_control:
     loop_var: file
     label: "{{ file | ansible.builtin.basename }}"
