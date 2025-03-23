@@ -3,7 +3,7 @@ nginx_extra_groups: []
 nginx_extra_packages: []
 nginx_writable_paths: []
 nginx_inaccessible_paths: []
-nginx_worker_processes: "{{ ansible_facts['processor_vcpus'] }}"
+nginx_worker_processes: auto
 nginx_tls13_only: false
 nginx_ciphers: AESGCM:CHACHA20:!aNULL:!RSA:!PSK
 nginx_max_body_size: 1

@@ -53,7 +53,7 @@ Role Variables
   Optional.
 * `nginx_worker_processes`  
   The number of worker processes nginx uses to serve requests.
-  Defaults to the number virtual CPUs detected by Ansible.
+  Defaults to `auto`, the number CPUs cores detected by nginx on startup.
 * `nginx_tls13_only`  
   If set to `true`, nginx is configured to support only TLSv1.3.
   The target system needs to have OpenSSL 1.1 or newer for this to work.
