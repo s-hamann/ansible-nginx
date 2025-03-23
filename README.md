@@ -127,7 +127,7 @@ Role Variables
       The first vhost for a `ip` and `port` combination is the default one and accepts all names not set on any other vhosts.
       Optional.
     * `ip`  
-      The IP address this vhost listens to.
+      The IP address this vhost listens on.
       This can be used to make nginx reachable on a specific network interface only.
       Defaults to `*`, i.e. all interfaces.
     * `port`  
