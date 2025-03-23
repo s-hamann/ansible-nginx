@@ -65,6 +65,9 @@ nginx_packages:
   yaml: php-yaml
   zip: php-zip
   zmq: php-zmq
+  gunicorn:
+    - gunicorn3
+    - python-setproctitle
 nginx_service_name:
   nginx: nginx
   php: php7.4-fpm

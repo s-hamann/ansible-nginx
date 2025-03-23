@@ -3,6 +3,7 @@ Nginx
 
 This role sets up nginx as a web server.
 PHP support can be enabled using PHP-FPM.
+Python support can be enabled using [Gunicorn](https://gunicorn.org/).
 
 Deploying web content is outside the scope of this role.
 
@@ -38,14 +39,14 @@ Role Variables
   If not set, the latest version in portage that is not masked (by keyword, package mask, ...) is used.
   Only used on Gentoo.
 * `nginx_writable_paths`  
-  If the target system uses systemd, the file system is mostly read-only to nginx (and PHP).
+  If the target system uses systemd, the file system is mostly read-only to nginx (and PHP and Gunicorn).
   A list of paths that should be writable can be given in `nginx_writable_paths`.
   This typically includes upload paths.
   Directories containing log files (defined by the appropriate variables) are automatically made writable.
   By default, no paths are writable.
 * `nginx_inaccessible_paths`  
   If the target system uses systemd, this option takes a list of paths, that should not be accessible at all for nginx (and PHP).
-  Regardless of this option, home directories are made inaccessible and the directories holding TLS private keys are made inaccessible for PHP.
+  Regardless of this option, home directories are made inaccessible and the directories holding TLS private keys are made inaccessible for PHP and Gunicorn.
   Optional.
 * `nginx_config_template`  
   An alternative jinja2 template to generate `nginx.conf`.
@@ -216,6 +217,9 @@ Role Variables
         If not set, the vhost's access log file is used.
       * `extra_options`  
         A list of additional configuration options for this location.
+      * `gunicorn_server`  
+        When set, all requests to this location are passed to the given Gunicorn server instance.
+        The value must be the name of a Gunicorn server instance defined in `nginx_gunicorn_servers`.
 
 The following options are specific to PHP and are only used if at least one vhost has `use_php` set.
 * `nginx_php_process_manager`  
@@ -288,6 +292,34 @@ The following options are specific to PHP and are only used if at least one vhos
     * any other key is added to `php.ini` as a section named like the key  
   The values are in turn dictionaries where keys are PHP configuration options for the appropriate section and values are the corresponding configuration values.
 
+The following options are specific to Gunicorn and are only used if at least one location has `gunicorn_server` set.
+
+* `nginx_gunicorn_servers`  
+  A dictionary of Gunicorn server instance configurations.
+  The dictionary keys are the names of the instances and are referenced by the `gunicorn_server` setting of locations.
+  Dictionary values are in turn dictionaries that describe the settings for this Gunicorn instance.
+  The may have the following keys:
+    * `venv_path`  
+      Directory of a virtual python environment in which the application is installed.
+      When set, the python installation in this venv is used to run Gunicorn.
+      This only works if Gunicorn is installed into the virtual environment or if the virtual environment has access to the system packages.
+      Note that this role does not create or set up the virtual environment.
+      Optional.
+    * `options`  
+      A dictionary of configuration options for Gunicorn.
+      Dictionary keys are option names and dictionary values the respective values.
+      Refer to [Gunicorn's documentation](https://docs.gunicorn.org/en/stable/settings.html) for valid options and their meaning.
+      Note that these options are not passed on the command line, but are written to Gunicorn's configuration file.
+      To configure the WSGI application to run set the `wsgi_app` option.
+      Optional.
+    * `systemd_override`  
+      If the target system uses systemd, appropriate unit files are created to start Gunicorn server instances.
+      This option allows customizing these units, e.g. to apply more security restrictions or loosen the default ones.
+      Must be a dictionary where keys are the names of options valid in the `[Service]` section of a systemd unit and dictionary values are the respective values.
+      Refer to `man 5 systemd.service`, `man 5 systemd.exec` and `man 5 systemd.kill` for valid settings and their meaning.
+      Optional.
+      Ignored if the target system does not use systemd.
+
 Dependencies
 ------------
 
@@ -334,6 +366,21 @@ nginx_vhosts:
           - 'index index.html'
       ~\.log$:
         return: 403
+  - filename: some_app.conf
+    locations:
+      /:
+        gunicorn_server: some_app
+      /static:
+        root: /opt/some_app/static
+  - filename: some_other_app.conf
+    root: /opt/some_other_app/static
+    locations:
+      /:
+        extra_options:
+          - 'try_files $uri @some_other_app'
+      '@some_other_app':
+        gunicorn_server: some_other_app
+
 nginx_php_enabled_functions:
   - 'phpinfo'
 nginx_php_extensions:
@@ -352,6 +399,21 @@ nginx_php_extra_options:
     bcmath.scale: 16
   Session:
     session.name: 'SessionID'
+
+nginx_gunicorn_servers:
+  some_app:
+    venv_path: /opt/some_app/
+    options:
+      wsgi_app: some_app:run
+      workers: 2
+    systemd_override:
+      RestrictAddressFamilies:
+        - null
+        - AF_UNIX
+  some_other_app:
+    options:
+      chdir: /opt/some_other_app/
+      wsgi_app: some_other_app
 ```
 
 License

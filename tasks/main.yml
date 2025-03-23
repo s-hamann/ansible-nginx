@@ -29,6 +29,7 @@
   ansible.builtin.set_fact:
     _use_tls: "{{ nginx_vhosts | selectattr('use_tls', 'defined') | map(attribute='use_tls') is ansible.builtin.any }}"
     _use_php: "{{ nginx_vhosts | selectattr('use_php', 'defined') | map(attribute='use_php') is ansible.builtin.any }}"
+    _use_gunicorn: "{{ nginx_vhosts | selectattr('locations', 'defined') | map(attribute='locations') | map('ansible.builtin.dict2items') | ansible.builtin.flatten | map(attribute='value') | selectattr('gunicorn_server', 'defined') is ansible.builtin.any }}"
 
 - name: 'Resolve PHP extension dependencies'
   ansible.builtin.set_fact:
@@ -39,6 +40,7 @@
     _package_list: "{{
       [nginx_packages['nginx']]
       | ansible.builtin.union(_use_php | ansible.builtin.ternary([nginx_packages['php']] | ansible.builtin.union((nginx_php_extensions + nginx_php_zend_extensions) | select('in', nginx_packages) | map('ansible.builtin.extract', nginx_packages) | ansible.builtin.flatten), []))
+      | ansible.builtin.union(_use_gunicorn | ansible.builtin.ternary(nginx_packages['gunicorn'], []))
       | ansible.builtin.union(nginx_extra_packages | default([]))
     }}"
 
@@ -334,6 +336,133 @@
     label: "{{ file | ansible.builtin.basename }}"
   when: "file | ansible.builtin.basename not in nginx_vhosts | map(attribute='filename')"
   notify: 'Reload nginx'
+
+- name: 'Set up gunicorn'
+  when: _use_gunicorn
+  block:
+
+    - name: 'Create gunicorn configuration directory'
+      ansible.builtin.file:
+        path: '/etc/gunicorn/'
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: 'Configure gunicorn'
+      ansible.builtin.template:
+        dest: "/etc/gunicorn/{{ server.name }}.conf.py"
+        src: gunicorn.conf.py.j2
+        owner: root
+        group: root
+        mode: '0644'
+      loop: "{{ nginx_gunicorn_servers | ansible.builtin.dict2items('name', 'settings') }}"
+      loop_control:
+        label: "{{ server.name }}"
+      vars:
+        server: "{{ item.settings | ansible.builtin.combine({'name': item.name}) }}"
+      notify: 'Restart gunicorn'
+
+    - name: 'Set up systemd services'
+      when: "ansible_facts['service_mgr'] == 'systemd'"
+      block:
+
+        - name: 'Install gunicorn services (systemd)'
+          ansible.builtin.template:
+            dest: "/etc/systemd/system/gunicorn@.service"
+            src: gunicorn.service.j2
+            owner: root
+            group: root
+            mode: '0644'
+          notify: 'Restart gunicorn'
+
+        - name: 'Install gunicorn sockets (systemd)'
+          ansible.builtin.template:
+            dest: "/etc/systemd/system/gunicorn@.socket"
+            src: gunicorn.socket.j2
+            owner: root
+            group: root
+            mode: '0644'
+
+        - name: "Create override directory for gunicorn services (systemd)"
+          ansible.builtin.file:
+            path: "/etc/systemd/system/gunicorn@{{ server.name }}.service.d/"
+            state: directory
+            owner: root
+            group: root
+            mode: '0755'
+          loop: "{{ nginx_gunicorn_servers | ansible.builtin.dict2items('name', 'settings') }}"
+          loop_control:
+            label: "{{ server.name }}"
+          vars:
+            server: "{{ item.settings | ansible.builtin.combine({'name': item.name}) }}"
+          when: "server.systemd_override is defined or server.venv_path is defined"
+
+        - name: "Install override file for gunicorn service (systemd)"
+          ansible.builtin.template:
+            dest: "/etc/systemd/system/gunicorn@{{ server.name }}.service.d/override.conf"
+            src: gunicorn_override.conf.j2
+            owner: root
+            group: root
+            mode: '0644'
+          notify: 'Restart gunicorn'
+          loop: "{{ nginx_gunicorn_servers | ansible.builtin.dict2items('name', 'settings') }}"
+          loop_control:
+            label: "{{ server.name }}"
+          vars:
+            server: "{{ item.settings | ansible.builtin.combine({'name': item.name}) }}"
+          when: "server.systemd_override is defined or server.venv_path is defined"
+
+        - name: 'Enable and start gunicorn sockets (systemd)'
+          ansible.builtin.systemd_service:
+            name: "gunicorn@{{ item }}.socket"
+            enabled: true
+            state: "{{ ansible_facts['is_chroot'] | ansible.builtin.ternary(omit, 'started') }}"
+          loop: "{{ nginx_gunicorn_servers.keys() }}"
+
+    - name: 'Set up OpenRC services'
+      when: "ansible_facts['service_mgr'] == 'openrc'"
+      block:
+
+        - name: 'Install gunicorn service (OpenRC)'
+          ansible.builtin.copy:
+            dest: "/etc/init.d/gunicorn"
+            src: gunicorn.init
+            owner: root
+            group: root
+            mode: '0755'
+          notify: 'Restart gunicorn'
+
+        - name: 'Install gunicorn service symlinks (OpenRC)'
+          ansible.builtin.file:
+            path: "/etc/init.d/gunicorn.{{ item }}"
+            state: link
+            owner: root
+            group: root
+            src: '/etc/init.d/gunicorn'
+          loop: "{{ nginx_gunicorn_servers.keys() }}"
+
+        - name: "Configure gunicorn services (OpenRC)"
+          ansible.builtin.template:
+            dest: "/etc/conf.d/gunicorn.{{ server.name }}"
+            src: gunicorn.conf.j2
+            owner: root
+            group: root
+            mode: '0644'
+          notify: 'Restart gunicorn'
+          loop: "{{ nginx_gunicorn_servers | ansible.builtin.dict2items('name', 'settings') }}"
+          loop_control:
+            label: "{{ server.name }}"
+          vars:
+            server: "{{ item.settings | ansible.builtin.combine({'name': item.name}) }}"
+          when: "server.venv_path is defined"
+
+        - name: 'Enable and start gunicorn services (OpenRC)'
+          ansible.builtin.service:
+            name: "gunicorn.{{ item }}"
+            enabled: true
+            state: "{{ ansible_facts['is_chroot'] | ansible.builtin.ternary(omit, 'started') }}"
+          loop: "{{ nginx_gunicorn_servers.keys() }}"
 
 - name: 'Enable and start php-fpm'
   ansible.builtin.service:

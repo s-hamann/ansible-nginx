@@ -1,0 +1,26 @@
+{# vim: filetype=systemd.jinja2 #}
+{{ ansible_managed | ansible.builtin.comment }}
+{% macro print_option(key, value) %}
+{% if value is None %}
+{{ key }}=
+{% elif value is string %}
+{{ key }}={{ value | ansible.builtin.quote }}
+{% elif value is boolean %}
+{{ key }}={{ value | ansible.builtin.ternary('true', 'false') }}
+{% else %}
+{{ key }}={{ value }}
+{% endif %}
+{% endmacro %}
+[Service]
+{% if server.venv_path is defined %}
+Environment=GUNICORN={{ server.venv_path | ansible.builtin.quote }}/bin/python -m gunicorn
+{% endif %}
+{% for key, value in (server.systemd_override | default({})).items() %}
+{% if value is sequence and value is not string %}
+{% for v in value %}
+{{ print_option(key, v) }}
+{% endfor %}
+{% else %}
+{{ print_option(key, value) }}
+{% endif %}
+{% endfor %}

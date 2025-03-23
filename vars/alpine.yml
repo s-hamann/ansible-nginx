@@ -87,6 +87,9 @@ nginx_packages:
   yaml: php83-pecl-yaml
   zip: php83-zip
   zstd: php83-pecl-zstd
+  gunicorn:
+    - py3-gunicorn
+    - py3-setproctitle
 nginx_service_name:
   nginx: nginx
   php: php-fpm83

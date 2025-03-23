@@ -1,0 +1,13 @@
+{# vim: filetype=systemd.jinja2 #}
+{{ ansible_managed | ansible.builtin.comment }}
+[Unit]
+Description=gunicorn socket (%i)
+
+[Socket]
+ListenStream=/run/gunicorn.%i.sock
+SocketUser={{ nginx_user }}
+SocketGroup={{ nginx_group }}
+SocketMode=0660
+
+[Install]
+WantedBy=sockets.target

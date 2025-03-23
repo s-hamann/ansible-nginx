@@ -1,0 +1,22 @@
+{{ ansible_managed | ansible.builtin.comment }}
+{% macro format_value(value) -%}
+{% if value == None %}
+None
+{%- elif value is string %}
+"{{ value }}"
+{%- else %}
+{{ value }}
+{%- endif %}
+{%- endmacro %}
+{% set options = {'proc_name': server.name} %}
+{% if ansible_facts['service_mgr'] != 'systemd' %}
+{% set _ = options.update({'bind': 'unix:/run/gunicorn.' ~ server.name ~ '.sock'}) %}
+{% endif %}
+{% set options = options | ansible.builtin.combine(server.options | default({})) %}
+{% for key, value in options.items() %}
+{% if value is sequence and value is not string %}
+{{ key.lstrip('-') }} = [{% for v in value %}{{ format_value(v) }}{% if not loop.last %}, {% endif %}{% endfor %}]
+{% else %}
+{{ key.lstrip('-') }} = {{ format_value(value) }}
+{% endif %}
+{% endfor %}

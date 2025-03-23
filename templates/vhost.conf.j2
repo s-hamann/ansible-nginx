@@ -11,31 +11,51 @@
 add_header {{ header }} "{{ value }}" always;
     {% endfor %}
 {% endmacro %}
-{% macro location_block(location) %}
-    {% if location.return is defined %}
-return {{ location.return }};
+{% macro location_block(location, location_configuration) %}
+    {% if location_configuration.return is defined %}
+return {{ location_configuration.return }};
     {% endif %}
-    {% if location.gzip_dynamic is defined %}
-gzip {{ location.gzip_dynamic | ansible.builtin.bool | ansible.builtin.ternary('on', 'off') }};
+    {% if location_configuration.gzip_dynamic is defined %}
+gzip {{ location_configuration.gzip_dynamic | ansible.builtin.bool | ansible.builtin.ternary('on', 'off') }};
     {% endif %}
-    {% if location.gzip_static is defined %}
-gzip_static {{ location.gzip_static | ansible.builtin.bool | ansible.builtin.ternary('on', 'off') }};
+    {% if location_configuration.gzip_static is defined %}
+gzip_static {{ location_configuration.gzip_static | ansible.builtin.bool | ansible.builtin.ternary('on', 'off') }};
     {% endif %}
-    {% if location.access_log is defined %}
-        {% if location.access_log | ansible.builtin.bool %}
-access_log {{ location.access_log }}{% if nginx_log_format is defined %} main{% endif %};
+    {% if location_configuration.access_log is defined %}
+        {% if location_configuration.access_log | ansible.builtin.bool %}
+access_log {{ location_configuration.access_log }}{% if nginx_log_format is defined %} main{% endif %};
         {% else %}
 access_log off;
         {% endif %}
     {% endif %}
-    {% if location.extra_options | default([]) | map('ansible.builtin.regex_search', '^\s*add_header\s') | select | list | count > 0 %}
+    {% if location_configuration.extra_options | default([]) | map('ansible.builtin.regex_search', '^\s*add_header\s') | select | list | count > 0 %}
         {{- security_headers() }}
     {% endif %}
-    {% for opt in location.extra_options | default([]) %}
+    {% for opt in location_configuration.extra_options | default([]) %}
         {{- opt }};
     {% endfor %}
+    {% if location_configuration.gunicorn_server is defined %}
+proxy_set_header X-Forwarded-For $remote_addr;
+proxy_set_header X-Forwarded-Proto $scheme;
+proxy_set_header X-Forwarded-SSL $https;
+proxy_set_header X-Url-Scheme $scheme;
+proxy_set_header X-Forwarded-Host $host;
+proxy_set_header X-Forwarded-Port "";
+proxy_set_header X-Forwarded-Prefix "";
+proxy_set_header Host $host;
+proxy_redirect off;
+proxy_pass http://gunicorn_{{ location_configuration.gunicorn_server }}{{ '/' if location.endswith('/') }};
+    {% endif %}
 {% endmacro %}
 
+{% block gunicorn_upstreams %}
+{% for location, location_configuration in _vhost.locations.items() if location_configuration.gunicorn_server is defined %}
+upstream gunicorn_{{ location_configuration.gunicorn_server }} {
+    server unix:/run/gunicorn.{{ location_configuration.gunicorn_server }}.sock;
+}
+
+{% endfor %}
+{% endblock %}
 {% block server_redirect %}
     {% if _vhost.unencrypted_port is defined and _vhost.use_tls | bool %}
 server {
@@ -110,7 +130,7 @@ server {
     # No other locations are checked if one of these matches.
     {% for location, location_configuration in _vhost.locations.items() if location.startswith('=') %}
     location {{ location }} {
-        {{ location_block(location_configuration) | indent(8) }}
+        {{ location_block(location, location_configuration) | indent(8) }}
     }
 
     {% endfor %}
@@ -138,7 +158,7 @@ server {
     # The longest matching prefix is used.
     {% for location, location_configuration in _vhost.locations.items() if location.startswith('^~') %}
     location {{ location }} {
-        {{ location_block(location_configuration) | indent(8) }}
+        {{ location_block(location, location_configuration) | indent(8) }}
     }
 
     {% endfor %}
@@ -200,17 +220,17 @@ server {
         {% if nginx_gzip_static | ansible.builtin.bool %}
         location ~ \.(css|js|txt|html|htm|xhtml|xml|json|svg)$ {
             gzip_static on;
-            {{ location_block({'extra_options': _vhost.static_extra_options}) | indent(12) }}
+            {{ location_block('~ \.(css|js|txt|html|htm|xhtml|xml|json|svg)$', {'extra_options': _vhost.static_extra_options}) | indent(12) }}
         }
         {% endif %}
-        {{ location_block({'extra_options': _vhost.static_extra_options}) | indent(8) }}
+        {{ location_block('~ ' ~ _vhost.static_assets | default(), {'extra_options': _vhost.static_extra_options}) | indent(8) }}
     }
 
     {% endif %}
     {% endblock %}
     {% for location, location_configuration in _vhost.locations.items() if location.startswith('~') or location.startswith('~*') %}
     location {{ location }} {
-        {{ location_block(location_configuration) | indent(8) }}
+        {{ location_block(location, location_configuration) | indent(8) }}
     }
 
     {% endfor %}
@@ -221,7 +241,7 @@ server {
     # The longest matching prefix is used.
     {% endif %}
     location {{ location }} {
-        {{ location_block(location_configuration) | indent(8) }}
+        {{ location_block(location, location_configuration) | indent(8) }}
     }
 
     {% endfor %}
@@ -232,7 +252,7 @@ server {
     # These are not compared to the URL at all.
     {% endif %}
     location {{ location }} {
-        {{ location_block(location_configuration) | indent(8) }}
+        {{ location_block(location, location_configuration) | indent(8) }}
     }
 
     {% endfor %}

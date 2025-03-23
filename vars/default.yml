@@ -2,6 +2,9 @@
 nginx_packages:
   nginx: nginx
   php: php-fpm
+  gunicorn:
+    - gunicorn
+    - setproctitle
 nginx_service_name:
   nginx: nginx
   php: php-fpm

@@ -21,6 +21,13 @@
     state: "{{ ansible_facts['is_chroot'] | ansible.builtin.ternary(omit, 'reloaded') }}"
   when: _use_php
 
+- name: 'Restart gunicorn'
+  ansible.builtin.service:
+    name: "{{ ('gunicorn@' if ansible_facts['service_mgr'] == 'systemd' else 'gunicorn.') ~ item }}"
+    state: "{{ ansible_facts['is_chroot'] | ansible.builtin.ternary(omit, 'restarted') }}"
+    daemon_reload: "{{ true if ansible_facts['service_mgr'] == 'systemd' else omit }}"
+  loop: "{{ nginx_gunicorn_servers.keys() }}"
+
 - name: 'Update nginx compressed static files'
   ansible.builtin.command: '/usr/local/sbin/update_gzip_static.sh'
   register: _update_gzip_static

@@ -1,0 +1,24 @@
+#!/sbin/openrc-run
+
+name="gunicorn daemon (${RC_SVCNAME#*.})"
+description=""
+pidfile="/run/gunicorn.${RC_SVCNAME#*.}.pid"
+if [ -n "${venv_path}" ]; then
+    command="${venv_path}/bin/python"
+    command_args="-m gunicorn"
+else
+    command=/usr/bin/gunicorn
+fi
+command_args="${command_args} --config /etc/gunicorn/${RC_SVCNAME#*.}.conf.py"
+command_args_background="--daemon --pid ${pidfile}"
+extra_started_commands="reload"
+
+depend() {
+	before nginx
+}
+
+reload() {
+	ebegin "Reloading ${RC_SVCNAME}"
+	start-stop-daemon --signal HUP --pidfile "${pidfile}"
+	eend $?
+}

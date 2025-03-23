@@ -29,6 +29,9 @@ nginx_packages:
   yaml: 'dev-php/pecl-yaml'
   yaz: 'dev-php/pecl-yaz'
   zmq: 'dev-php/pecl-zmq'
+  gunicorn:
+    - 'www-servers/gunicorn'
+    - 'dev-python/setproctitle'
 nginx_use_flags:
   php:
     bcmath: bcmath
