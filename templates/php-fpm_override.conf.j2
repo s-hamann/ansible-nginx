@@ -24,7 +24,9 @@ InaccessiblePaths=-{{ path | ansible.builtin.quote }}
 {% endfor %}
 {% endif %}
 {% if _use_tls %}
-InaccessiblePaths=-{{ nginx_vhosts | map(attribute='tls_cert_key') | select('defined') | map('ansible.builtin.dirname') | ansible.builtin.unique | map('ansible.builtin.quote') | join(' ') }}
+{% for path in nginx_vhosts | map(attribute='tls_cert_key') | select('defined') | map('ansible.builtin.dirname') | ansible.builtin.unique %}
+InaccessiblePaths=-{{ path | ansible.builtin.quote }}
+{% endfor %}
 {% endif %}
 PrivateTmp=true
 PrivateDevices=true
