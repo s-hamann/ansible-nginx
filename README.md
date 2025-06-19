@@ -312,6 +312,9 @@ The following options are specific to Gunicorn and are only used if at least one
       Note that these options are not passed on the command line, but are written to Gunicorn's configuration file.
       To configure the WSGI application to run set the `wsgi_app` option.
       Optional.
+    * `environment`  
+      A dictionary of environment variables and their respective values that will be exported to gunicorn and the WSGI application it hosts.
+      Optional.
     * `systemd_override`  
       If the target system uses systemd, appropriate unit files are created to start Gunicorn server instances.
       This option allows customizing these units, e.g. to apply more security restrictions or loosen the default ones.

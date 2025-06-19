@@ -9,6 +9,11 @@ if [ -n "${venv_path}" ]; then
 else
     command=/usr/bin/gunicorn
 fi
+if [ -f "/etc/gunicorn/${RC_SVCNAME#*.}.env" ]; then
+    set -o allexport
+    . "/etc/gunicorn/${RC_SVCNAME#*.}.env"
+    set +o allexport
+fi
 command_args="${command_args} --config /etc/gunicorn/${RC_SVCNAME#*.}.conf.py"
 command_args_background="--daemon --pid ${pidfile}"
 extra_started_commands="reload"

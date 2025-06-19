@@ -363,6 +363,21 @@
         server: "{{ item.settings | ansible.builtin.combine({'name': item.name}) }}"
       notify: 'Restart gunicorn'
 
+    - name: 'Configure gunicorn environment'
+      ansible.builtin.template:
+        dest: "/etc/gunicorn/{{ server.name }}.env"
+        src: gunicorn.env.j2
+        owner: root
+        group: root
+        mode: '0640'
+      loop: "{{ nginx_gunicorn_servers | ansible.builtin.dict2items('name', 'settings') }}"
+      loop_control:
+        label: "{{ server.name }}"
+      vars:
+        server: "{{ item.settings | ansible.builtin.combine({'name': item.name}) }}"
+      notify: 'Restart gunicorn'
+      when: "server.environment is defined"
+
     - name: 'Set up systemd services'
       when: "ansible_facts['service_mgr'] == 'systemd'"
       block:

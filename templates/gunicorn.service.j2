@@ -10,6 +10,7 @@ Type=notify
 NotifyAccess=main
 RuntimeDirectory=gunicorn.%i
 Environment=GUNICORN=/usr/bin/gunicorn
+EnvironmentFile=-/etc/gunicorn/%i.env
 ExecStart=${GUNICORN} --config /etc/gunicorn/%i.conf.py
 ExecReload=/bin/kill -s HUP $MAINPID
 KillMode=mixed
