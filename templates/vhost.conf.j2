@@ -59,7 +59,7 @@ upstream gunicorn_{{ location_configuration.gunicorn_server }} {
 {% block server_redirect %}
     {% if _vhost.unencrypted_port is defined and _vhost.use_tls | bool %}
 server {
-    listen {{ _vhost.ip | default('*') }}:{{ _vhost.unencrypted_port }};
+    listen {{ _vhost.ip | default('[::]') }}:{{ _vhost.unencrypted_port }} ipv6only=off;
     {% if _vhost.server_name is defined %}
     server_name {{ [_vhost.server_name] | ansible.builtin.flatten | join(' ') }};
     {% endif %}
@@ -70,7 +70,7 @@ server {
 
 server {
     {% block server_basic %}
-    listen {{ _vhost.ip | default('*') }}:{{ _vhost.port | default(_vhost.use_tls | ansible.builtin.bool | ansible.builtin.ternary(443, 80)) }}{% if _vhost.use_tls | ansible.builtin.bool %} ssl http2{% endif %};
+    listen {{ _vhost.ip | default('[::]') }}:{{ _vhost.port | default(_vhost.use_tls | ansible.builtin.bool | ansible.builtin.ternary(443, 80)) }} ipv6only=off{% if _vhost.use_tls | ansible.builtin.bool %} ssl http2{% endif %};
     {% if _vhost.server_name is defined %}
     server_name {{ [_vhost.server_name] | ansible.builtin.flatten | join(' ') }};
     {% endif %}

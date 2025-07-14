@@ -130,7 +130,7 @@ Role Variables
     * `ip`  
       The IP address this vhost listens on.
       This can be used to make nginx reachable on a specific network interface only.
-      Defaults to `*`, i.e. all interfaces.
+      Defaults to `[::]`, i.e. all interfaces on both IPv4 and IPv6.
     * `port`  
       The TCP port on which this vhost is reachable.
       Defaults to `443` when `use_tls` is set and `80` otherwise.
