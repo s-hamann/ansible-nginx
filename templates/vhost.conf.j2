@@ -34,7 +34,44 @@ access_log off;
     {% for opt in location_configuration.extra_options | default([]) %}
         {{- opt }};
     {% endfor %}
-    {% if location_configuration.gunicorn_server is defined %}
+    {% if location_configuration.upstream is defined %}
+{% if location_configuration.upstream.proxy_http_version is not defined %}
+proxy_http_version 1.1;
+{% endif %}
+{% if location_configuration.upstream.headers is defined %}
+{% set default_proxied_headers = {
+    'Host': '$host',
+    'X-Forwarded-For': '$remote_addr',
+    'X-Forwarded-Host': '$host',
+    'X-Forwarded-Proto': '$scheme',
+    'X-Forwarded-SSL': '$https',
+    'X-Url-Scheme': '$scheme',
+} %}
+{% if location_configuration.upstream.websocket | default(false) | ansible.builtin.bool %}
+{% set _ = default_proxied_headers.update({
+    'Upgrade': '$http_upgrade',
+    'Connection': '$connection_upgrade',
+}) %}
+{% endif %}
+{% for field, value in (default_proxied_headers | ansible.builtin.combine(location_configuration.upstream.headers)).items() if value != omit %}
+proxy_set_header {{ field }} {{ value }};
+{% endfor %}
+{% endif %}
+{% for key, value in location_configuration.upstream.items() if key not in ['name', 'headers', 'websocket'] %}
+{% if value == None %}
+{{ key }};
+{% elif value is boolean %}
+{{ key }} {{ value | ansible.builtin.ternary('on', 'off') }};
+{% elif value is sequence and value is not string %}
+{% for v in value %}
+{{ key }} {{ v }};
+{% endfor %}
+{% else %}
+{{ key }} {{ value }};
+{% endif %}
+{% endfor %}
+proxy_pass http://{{ location_configuration.upstream.name }}{{ '/' if location.endswith('/') }};
+    {% elif location_configuration.gunicorn_server is defined %}
 proxy_set_header X-Forwarded-For $remote_addr;
 proxy_set_header X-Forwarded-Proto $scheme;
 proxy_set_header X-Forwarded-SSL $https;
@@ -48,6 +85,26 @@ proxy_pass http://gunicorn_{{ location_configuration.gunicorn_server }}{{ '/' if
     {% endif %}
 {% endmacro %}
 
+{% block upstreams %}
+{% for name, settings in _vhost.upstreams.items() %}
+upstream {{ name }} {
+    {% for key, value in settings.items() %}
+    {% if value == None %}
+    {{ key }};
+    {% elif value is boolean %}
+    {{ key }} {{ value | ansible.builtin.ternary('on', 'off') }};
+    {% elif value is sequence and value is not string %}
+    {% for v in value %}
+    {{ key }} {{ v }};
+    {% endfor %}
+    {% else %}
+    {{ key }} {{ value }};
+    {% endif %}
+    {% endfor %}
+}
+
+{% endfor %}
+{% endblock %}
 {% block gunicorn_upstreams %}
 {% for location, location_configuration in _vhost.locations.items() if location_configuration.gunicorn_server is defined %}
 upstream gunicorn_{{ location_configuration.gunicorn_server }} {
@@ -56,6 +113,13 @@ upstream gunicorn_{{ location_configuration.gunicorn_server }} {
 
 {% endfor %}
 {% endblock %}
+{% if _vhost.locations.values() | selectattr('upstream', 'defined') | map(attribute='upstream') | selectattr('websocket', 'defined') | map(attribute='websocket') is ansible.builtin.any %}
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' '';
+}
+
+{% endif %}
 {% block server_redirect %}
     {% if _vhost.unencrypted_port is defined and _vhost.use_tls | bool %}
 server {

@@ -1,7 +1,7 @@
 Nginx
 =====
 
-This role sets up nginx as a web server.
+This role sets up nginx as a web server or reverse proxy.
 PHP support can be enabled using PHP-FPM.
 Python support can be enabled using [Gunicorn](https://gunicorn.org/).
 
@@ -215,11 +215,39 @@ Role Variables
       * `access_log`  
         Sets the access log for this location.
         If not set, the vhost's access log file is used.
+      * `upstream`  
+        A dictionary of settings for the [HTTP Proxy module](https://nginx.org/en/docs/http/ngx_http_proxy_module.html).
+        When set, nginx acts as a reverse proxy for this location.
+        Keys are directive names and values are their parameters.
+        Set the value to `null` for directives that do not expect parameters.
+        Set the value to a list of values to repeat the directive.
+        Refer to the [nginx documentation](https://nginx.org/en/docs/http/ngx_http_proxy_module.html) for valid directives and their meaning.
+        The following key have a special meaning:
+        * `name`  
+          The name of the upstream to proxy to, i.e. one of the key in the `upstreams` dictionary (see below).
+          Mandatory.
+        * `headers`  
+          A dictionary of header fields and their values.
+          These fields will be sent to the proxied upstream server.
+          See [`proxy_set_header`](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_set_header) for more information.
+          A number of commonly useful header fields are set by default.
+          Set them to `omit` to not pass them to the proxied upstream.
+          Optional.
+        * `websocket`  
+          Whether to support proxying WebSocket connections.
+          Defaults to `false`.
       * `extra_options`  
         A list of additional configuration options for this location.
       * `gunicorn_server`  
         When set, all requests to this location are passed to the given Gunicorn server instance.
         The value must be the name of a Gunicorn server instance defined in `nginx_gunicorn_servers`.
+    * `upstreams`  
+      A dictionary of upstream configurations.
+      Keys are upstream names and values are in turn dictionaries describing the settings for this upstream.
+      In this dictionary keys are interpreted as upstream directive names and values as their parameters.
+      Set the value to `null` for directives that do not expect parameters.
+      Set the value to a list of values to repeat the directive.
+      Refer to the [nginx documentation](https://nginx.org/en/docs/http/ngx_http_upstream_module.html) for valid directives and their meaning.
 
 The following options are specific to PHP and are only used if at least one vhost has `use_php` set.
 * `nginx_php_process_manager`  
@@ -383,6 +411,23 @@ nginx_vhosts:
           - 'try_files $uri @some_other_app'
       '@some_other_app':
         gunicorn_server: some_other_app
+  - filename: proxy.conf
+    upstreams:
+      proxy:
+        server:
+          - backend1.example.com weight=5
+          - 127.0.0.1:8080       max_fails=3 fail_timeout=30s
+          - unix:/tmp/backend3
+          - backup1.example.com  backup
+        ip_hash: null
+        keepalive: 16
+    locations:
+      /:
+        upstream:
+          name: proxy
+        headers:
+          X-Example-Header: 'added by nginx'
+        proxy_redirect: false
 
 nginx_php_enabled_functions:
   - 'phpinfo'
