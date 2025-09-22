@@ -86,7 +86,7 @@ proxy_pass http://gunicorn_{{ location_configuration.gunicorn_server }}{{ '/' if
 {% endmacro %}
 
 {% block upstreams %}
-{% for name, settings in _vhost.upstreams.items() %}
+{% for name, settings in (_vhost.upstreams | default({})).items() %}
 upstream {{ name }} {
     {% for key, value in settings.items() %}
     {% if value == None %}
