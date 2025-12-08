@@ -137,7 +137,10 @@ server {
     {% block server_basic %}
     listen {{ _vhost.ip | default('[::]') }}:{{ _vhost.port | default(_vhost.use_tls | ansible.builtin.bool | ansible.builtin.ternary(443, 80)) }} ipv6only=off{% if _vhost.use_tls | ansible.builtin.bool %} ssl{% endif %};
     {% if _vhost.use_tls %}
+    listen {{ _vhost.ip | default('[::]') }}:{{ _vhost.port | default(443) }} ipv6only=off quic reuseport;
     http2 on;
+    http3 on;
+    add_header Alt-Svc 'h3=":$server_port"; ma=86400';
     {% endif %}
     {% if _vhost.server_name is defined %}
     server_name {{ [_vhost.server_name] | ansible.builtin.flatten | join(' ') }};
