@@ -5,7 +5,7 @@
 ; Disable certain functions for security reasons.
 disable_functions = {{ nginx_php_disabled_functions | ansible.builtin.difference(nginx_php_enabled_functions) | sort | join(',') }}
 
-{% for k, v in (nginx_php_default_options['PHP'] | combine(nginx_php_extra_options['PHP'] | default({}))).items() %}
+{% for k, v in (nginx_php_default_options['PHP'] | ansible.builtin.combine(nginx_php_extra_options['PHP'] | default({}))).items() %}
 {{ k }} = {{ v }}
 {% endfor %}
 
@@ -24,7 +24,7 @@ extension={{ extension }}
 ; Module Settings ;
 ;;;;;;;;;;;;;;;;;;;
 
-{% for key, options in (nginx_php_default_options | combine(nginx_php_extra_options, recursive=True)).items() if key not in ['PHP', 'php-fpm', 'php-fpm_pool'] %}
+{% for key, options in (nginx_php_default_options | ansible.builtin.combine(nginx_php_extra_options, recursive=True)).items() if key not in ['PHP', 'php-fpm', 'php-fpm_pool'] %}
 [{{ key }}]
 {% for k, v in options.items() %}
 {{ k }} = {{ v }}

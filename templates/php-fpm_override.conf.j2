@@ -3,7 +3,7 @@
 [Service]
 User={{ nginx_php_user }}
 Group={{ nginx_php_group }}
-PIDFile={{ nginx_pidfile['php'] | quote }}
+PIDFile={{ nginx_pidfile['php'] | ansible.builtin.quote }}
 RuntimeDirectory={{ nginx_pidfile['php'] | ansible.builtin.dirname | ansible.builtin.relpath('/run') | ansible.builtin.quote }}
 # Disable searching and processing additional ini files
 Environment=PHP_INI_SCAN_DIR=

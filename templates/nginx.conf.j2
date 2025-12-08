@@ -65,7 +65,7 @@ http {
 
     # Set caching headers per content type.
     map $sent_http_content_type $expires {
-        {% for type, expires in ({'default': 'off'} | combine(nginx_caching_policy)).items() %}
+        {% for type, expires in ({'default': 'off'} | ansible.builtin.combine(nginx_caching_policy)).items() %}
         {{ type }} {{ expires }};
         {% endfor %}
     }
@@ -87,7 +87,7 @@ http {
     {% endblock %}
 
     {% block http_gzip %}
-    {% if nginx_gzip_dynamic | bool %}
+    {% if nginx_gzip_dynamic | ansible.builtin.bool %}
     # Response compression
     gzip on;
     gzip_types
