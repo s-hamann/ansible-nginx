@@ -8,7 +8,6 @@ nginx_packages:
   bcmath: php-bcmath
   bz2: php-bz2
   curl: php-curl
-  dba: php-dba
   dom: php-xml
   ds: php-ds
   enchant: php-enchant
@@ -18,7 +17,6 @@ nginx_packages:
   gmp: php-gmp
   igbinary: php-igbinary
   imagick: php-imagick
-  imap: php-imap
   interbase: php-interbase
   intl: php-intl
   json: php-json
@@ -33,7 +31,6 @@ nginx_packages:
   mysqlnd: php-mysql
   oauth: php-oauth
   odbc: php-odbc
-  opcache: php-opcache
   pdo_dblib: php-sybase
   pdo_firebird: php-interbase
   pdo_mysql: php-mysql
@@ -43,7 +40,6 @@ nginx_packages:
   pgsql: php-pgsql
   pspell: php-pspell
   readline: php-readline
-  recode: php-recode
   redis: php-redis
   rrd: php-rrd
   simplexml: php-xml
@@ -66,16 +62,16 @@ nginx_packages:
   zip: php-zip
   zmq: php-zmq
   gunicorn:
-    - gunicorn3
-    - python-setproctitle
+    - gunicorn
+    - python3-setproctitle
 nginx_service_name:
   nginx: nginx
-  php: php7.3-fpm
+  php: php8.4-fpm
 nginx_user: www-data
 nginx_group: www-data
 nginx_config_dir:
   nginx: '/etc/nginx/'
-  php: '/etc/php/7.3/fpm/'
+  php: '/etc/php/8.4/fpm/'
 nginx_pidfile:
   nginx: '/run/nginx/nginx.pid'
-  php: '/run/php/php7.3-fpm.pid'
+  php: '/run/php/php8.4-fpm.pid'
