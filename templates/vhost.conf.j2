@@ -12,6 +12,7 @@ add_header {{ header }} "{{ value }}" always;
     {% endfor %}
 {% endmacro %}
 {% macro location_block(location, location_configuration) %}
+    {{- '' }}{# Force output to be a string, even if the macro returns nothing else. -#}
     {% if location_configuration.return is defined %}
 return {{ location_configuration.return }};
     {% endif %}
@@ -276,7 +277,7 @@ server {
     }
 
     {% block server_static_assets %}
-    {% if not _vhost.log_static_assets | ansible.builtin.bool or nginx_gzip_static | ansible.builtin.bool or _vhost.static_assets | count %}
+    {% if not _vhost.log_static_assets | ansible.builtin.bool or nginx_gzip_static | ansible.builtin.bool or _vhost.static_assets | count > 0 %}
     location ~ {{ _vhost.static_assets | default() }} {
         {% if not _vhost.log_static_assets | ansible.builtin.bool %}
         access_log off;

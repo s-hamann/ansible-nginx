@@ -234,7 +234,7 @@
   notify:
     - 'Restart nginx'
     - 'Restart php-fpm'
-  when: "[nginx_extra_groups | default([])] | ansible.builtin.flatten | count"
+  when: "[nginx_extra_groups | default([])] | ansible.builtin.flatten | count > 0"
 
 - name: 'Install update_gzip_static.sh'
   ansible.builtin.template:

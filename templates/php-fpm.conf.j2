@@ -33,10 +33,10 @@ pm.process_idle_timeout = {{ nginx_php_process_idle_timeout }}s;
 {% endif %}
 pm.max_requests = {{ nginx_php_max_requests }}
 
-{% if nginx_php_status_path | default(false) %}
+{% if nginx_php_status_path | default(false) is ansible.builtin.truthy %}
 pm.status_path = {{ nginx_php_status_path }}
 {% endif %}
-{% if nginx_php_ping_path | default(false) %}
+{% if nginx_php_ping_path | default(false) is ansible.builtin.truthy %}
 ping.path = {{ nginx_php_ping_path }}
 {% endif %}
 

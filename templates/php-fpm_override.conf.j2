@@ -18,7 +18,7 @@ ReadWritePaths=-{{ nginx_php_error_log | ansible.builtin.dirname }}
 {% for path in [nginx_writable_paths] | ansible.builtin.flatten | ansible.builtin.unique %}
 ReadWritePaths=-{{ path | ansible.builtin.quote }}
 {% endfor %}
-{% if nginx_inaccessible_paths | count %}
+{% if nginx_inaccessible_paths | count > 0 %}
 {% for path in [nginx_inaccessible_paths] | ansible.builtin.flatten | ansible.builtin.unique %}
 InaccessiblePaths=-{{ path | ansible.builtin.quote }}
 {% endfor %}
