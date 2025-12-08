@@ -135,7 +135,10 @@ server {
 
 server {
     {% block server_basic %}
-    listen {{ _vhost.ip | default('[::]') }}:{{ _vhost.port | default(_vhost.use_tls | ansible.builtin.bool | ansible.builtin.ternary(443, 80)) }} ipv6only=off{% if _vhost.use_tls | ansible.builtin.bool %} ssl http2{% endif %};
+    listen {{ _vhost.ip | default('[::]') }}:{{ _vhost.port | default(_vhost.use_tls | ansible.builtin.bool | ansible.builtin.ternary(443, 80)) }} ipv6only=off{% if _vhost.use_tls | ansible.builtin.bool %} ssl{% endif %};
+    {% if _vhost.use_tls %}
+    http2 on;
+    {% endif %}
     {% if _vhost.server_name is defined %}
     server_name {{ [_vhost.server_name] | ansible.builtin.flatten | join(' ') }};
     {% endif %}
